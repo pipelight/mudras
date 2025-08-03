@@ -1,0 +1,42 @@
+
+Super {
+  @release {
+    // enter a submap
+    @enter niri
+  }
+}
+
+// // Submap definition
+// @submap niri {
+//     @press Ctrl+m {
+//       niri msg move-column-left; 
+//     }
+//     @press Ctrl+i {
+//       niri msg move-column-right; 
+//     }
+//
+//     // Exit the submap
+//     @press Super Escape { 
+//       @exit; 
+//     }
+// }
+//
+// // Common applications
+
+Super+Enter {
+  @press  {
+    kitty -e fish;
+  }
+}
+
+// @press Super+Space {
+//   yofi;
+// }
+//
+// // Common utils
+// @repeat XF86MonBrightnessUp { 
+//   light -A 10; 
+// }
+// @repeat XF86MonBrightnessDown { 
+//   light -U 10; 
+// }

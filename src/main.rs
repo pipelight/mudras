@@ -1,6 +1,30 @@
 mod config;
 mod error;
 
-fn main() {
-    println!("Hello, world!");
+use miette::{Error, IntoDiagnostic, MietteHandlerOpts, Result, RgbColors};
+
+use config::Config;
+
+fn main() -> Result<()> {
+    make_handler()?;
+    Config::get().into_diagnostic()?;
+    Ok(())
+}
+/// The make handler functions is executed right after the main function
+/// to set up a verbose and colorful error/panic handler.
+pub fn make_handler() -> Result<()> {
+    miette::set_hook(Box::new(|_| {
+        Box::new(
+            MietteHandlerOpts::new()
+                .rgb_colors(RgbColors::Never)
+                .color(true)
+                .unicode(true)
+                .terminal_links(true)
+                .context_lines(3)
+                .with_cause_chain()
+                .build(),
+        )
+    }))?;
+    miette::set_panic_hook();
+    Ok(())
 }
