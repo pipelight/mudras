@@ -7,7 +7,7 @@ use config::Config;
 
 fn main() -> Result<()> {
     make_handler()?;
-    Config::get().into_diagnostic()?;
+    let config = Config::get().into_diagnostic()?;
     Ok(())
 }
 /// The make handler functions is executed right after the main function

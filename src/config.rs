@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 
 // Parse
 use knus::errors::DecodeError;
-use knus::Decode;
+use knus::{Decode, DecodeChildren};
 
 // Error
 use crate::error::{MudrasError, WrapError};
@@ -14,7 +14,14 @@ use log::{error, trace};
 use miette::{Error, IntoDiagnostic, Result};
 
 #[derive(Debug, PartialEq, Serialize)]
-pub struct Config(pub Vec<Bind>);
+pub struct Config(pub Vec<Items>);
+
+#[derive(Debug, PartialEq, Serialize)]
+pub enum Items {
+    Bind(Bind),
+    // Submap(Submap)
+}
+
 impl<S> knus::DecodeChildren<S> for Config
 where
     S: knus::traits::ErrorSpan,
@@ -39,7 +46,7 @@ pub struct Bind {
     pub actions: Action,
 }
 
-#[derive(knus::Decode, Debug, Default, PartialEq, Eq, Hash, Serialize)]
+#[derive(Debug, Default, PartialEq, Eq, Hash, Serialize)]
 pub struct Action {
     pub press: Option<Vec<String>>,
     pub release: Option<Vec<String>>,
@@ -54,71 +61,49 @@ where
         node: &knus::ast::SpannedNode<S>,
         ctx: &mut knus::decode::Context<S>,
     ) -> Result<Self, DecodeError<S>> {
-        println!("{:#?}", node);
-        println!("{:#?}", ctx);
-
-        // if let Some(type_name) = &node.type_name {
-        //     ctx.emit_error(DecodeError::unexpected(
-        //         type_name,
-        //         "type name",
-        //         "no type name expected for this node",
-        //     ));
-        // }
-        //
-        // for val in node.arguments.iter() {
-        //     ctx.emit_error(DecodeError::unexpected(
-        //         &val.literal,
-        //         "argument",
-        //         "no arguments expected for this node",
-        //     ));
-        // }
-
-        let press = None;
-        let release = None;
-        let repeat = None;
-
         let key = node.node_name.parse::<String>().unwrap();
+
+        let mut press = None;
+        let mut release = None;
+        let mut repeat = None;
+
         for child in node.children() {
             let name: String = child.node_name.to_string();
             match &*name {
                 "@press" => {
-                    let actions: Vec<String> = child.decode_node();
-                    let press = Some(actions);
+                    press = Some(children_to_commands(child, ctx)?);
                 }
                 "@release" => {
-                    release = child;
+                    release = Some(children_to_commands(child, ctx)?);
                 }
                 "@repeat" => {
-                    repeat = child;
+                    repeat = Some(children_to_commands(child, ctx)?);
                 }
-            }
+                _ => {}
+            };
         }
-        // for child in node.children() {
-        //     let name: String = child.node_name.to_string();
-        //     match &*name {
-        //         "@press" => {
-        //             press = child.;
-        //         }
-        //         "@release" => {
-        //             release = child;
-        //         }
-        //         "@repeat" => {
-        //             repeat = child;
-        //         }
-        //     }
-        // }
-
-        // let mode = parse_arg_node("mode", node, ctx)?;
+        let actions = Action {
+            press,
+            release,
+            repeat,
+        };
 
         Ok(Self { key, actions })
     }
 }
-
-// #[derive(PartialEq,Eq,Hash, knuffel::DecodeScalar )]
-// pub struct Bind {
-//     mode: Mode,
-//     keys: Keys,
-// }
+pub fn children_to_commands<S: knus::traits::ErrorSpan>(
+    node: &knus::ast::SpannedNode<S>,
+    ctx: &mut knus::decode::Context<S>,
+) -> Result<Vec<String>, DecodeError<S>> {
+    let mut commands: Vec<String> = vec![];
+    for child in node.children() {
+        if child.node_name.to_string() == "-" {
+            let cmd: String = parse_arg_node("-", child, ctx)?;
+            commands.push(cmd);
+        }
+    }
+    Ok(commands)
+}
 
 #[derive(knus::Decode, Default, Debug, PartialEq, Serialize)]
 pub struct Mode {
@@ -160,7 +145,6 @@ fn parse_arg_node<S: knus::traits::ErrorSpan, T: knus::traits::DecodeScalar<S>>(
             format!("unexpected node `{}`", child.node_name.escape_default()),
         ));
     }
-
     Ok(value)
 }
 
@@ -189,6 +173,7 @@ impl Config {
         let path = Self::release_path();
 
         let path = path.display().to_string();
+
         let config = match Self::from_file(&path) {
             Ok(v) => v,
             Err(e) => {
@@ -204,7 +189,6 @@ impl Config {
                 return Err(err.into());
             }
         };
-
         trace!("Found config file.");
         Ok(config)
     }
@@ -225,7 +209,8 @@ mod tests {
 
     #[test]
     fn parse_config_file() -> Result<()> {
-        Config::get()?;
+        let config = Config::get()?;
+        println!("{:#?}", config);
         Ok(())
     }
 }

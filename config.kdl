@@ -1,33 +1,46 @@
+Super+Enter {
+  @press {
+    - "kitty -e fish"
+    - r#"
+      notify-send "new term"
+      "#
+  }
+}
 
 Super {
   @release {
     // enter a submap
-    @enter niri
+    @enter "niri"
   }
 }
 
-// // Submap definition
-// @submap niri {
-//     @press Ctrl+m {
-//       niri msg move-column-left; 
-//     }
-//     @press Ctrl+i {
-//       niri msg move-column-right; 
-//     }
-//
-//     // Exit the submap
-//     @press Super Escape { 
-//       @exit; 
-//     }
-// }
-//
+// Submap definition
+"@submap niri" {
+  Ctrl+m {
+    @press {
+      - "niri msg move-column-left"
+    }
+  }
+  Ctrl+i {
+    @press {
+      - "niri msg move-column-right"
+    }
+  }
+
+  // Exit the submap
+  Super { 
+    @press {
+      @exit; 
+    }
+  }
+  Escape { 
+    @press {
+      @exit; 
+    }
+  }
+}
+
 // // Common applications
-
-Super+Enter {
-  @press  {
-    kitty -e fish;
-  }
-}
 
 // @press Super+Space {
 //   yofi;
