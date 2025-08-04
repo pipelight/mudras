@@ -14,12 +14,14 @@ use log::{error, trace};
 use miette::{Error, IntoDiagnostic, Result};
 
 #[derive(Debug, PartialEq, Serialize)]
-pub struct Config(pub Vec<Items>);
+pub struct Config {
+    binds: Vec<Items>,
+}
 
 #[derive(Debug, PartialEq, Serialize)]
 pub enum Items {
     Bind(Bind),
-    // Submap(Submap)
+    Submap(Submap),
 }
 
 impl<S> knus::DecodeChildren<S> for Config
@@ -32,27 +34,75 @@ where
     ) -> Result<Self, DecodeError<S>> {
         let mut binds = Vec::new();
         for node in nodes {
-            let bind = Bind::decode_node(node, ctx)?;
-            binds.push(bind);
+            match &*node.node_name.to_string() {
+                "@submap" => {
+                    let submap = Submap::decode_node(node, ctx)?;
+                    println!("{:#?}", submap);
+                    binds.push(Items::Submap(submap));
+                }
+                _ => {
+                    let bind = Bind::decode_node(node, ctx)?;
+                    println!("{:#?}", bind);
+                    binds.push(Items::Bind(bind));
+                }
+            };
         }
-        Ok(Self(binds))
+        Ok(Self { binds })
     }
 }
 
 #[derive(Default, Debug, PartialEq, Serialize)]
+pub struct Submap {
+    pub name: String,
+    pub binds: Vec<Bind>,
+}
+impl<S> knus::Decode<S> for Submap
+where
+    S: knus::traits::ErrorSpan,
+{
+    fn decode_node(
+        node: &knus::ast::SpannedNode<S>,
+        ctx: &mut knus::decode::Context<S>,
+    ) -> Result<Self, DecodeError<S>> {
+        // Global props
+        let mut name: String = "".to_owned();
+        for (key, val) in &node.properties {
+            match &***key {
+                "name" => {
+                    name = knus::traits::DecodeScalar::decode(val, ctx)?;
+                }
+                _ => {}
+            };
+        }
+        // Binds
+        let mut binds = Vec::new();
+        for node in node.children() {
+            let bind = Bind::decode_node(node, ctx)?;
+            binds.push(bind);
+        }
+        Ok(Submap { name, binds })
+    }
+}
+
+#[derive(Debug, PartialEq, Serialize)]
 pub struct Bind {
     pub key: String,
-    #[serde(flatten)]
-    pub actions: Action,
+    // #[serde(flatten)]
+    pub action: Action,
+    // Exta properties
+    /// Whether the keys must be passed to underlying applications
+    /// Default to true (keys are not passed)
+    pub swallow: Option<bool>,
 }
-
-#[derive(Debug, Default, PartialEq, Eq, Hash, Serialize)]
-pub struct Action {
-    pub press: Option<Vec<String>>,
-    pub release: Option<Vec<String>>,
-    pub repeat: Option<Vec<String>>,
+impl Default for Bind {
+    fn default() -> Self {
+        Self {
+            key: String::default(),
+            action: Action::default(),
+            swallow: Some(true),
+        }
+    }
 }
-
 impl<S> knus::Decode<S> for Bind
 where
     S: knus::traits::ErrorSpan,
@@ -61,36 +111,86 @@ where
         node: &knus::ast::SpannedNode<S>,
         ctx: &mut knus::decode::Context<S>,
     ) -> Result<Self, DecodeError<S>> {
-        let key = node.node_name.parse::<String>().unwrap();
+        let key = node.node_name.to_string();
 
-        let mut press = None;
-        let mut release = None;
-        let mut repeat = None;
+        // Global args
+        let mut swallow = Some(true); // default
+        for (name, val) in &node.properties {
+            match &***name {
+                "swallow" => {
+                    swallow = Some(knus::traits::DecodeScalar::decode(val, ctx)?);
+                }
+                _ => {}
+            }
+        }
 
+        let mut action = Action::default();
         for child in node.children() {
             let name: String = child.node_name.to_string();
             match &*name {
                 "@press" => {
-                    press = Some(children_to_commands(child, ctx)?);
+                    let mut iter_args = node.arguments.iter();
+                    let repeat = if let Some(val) = iter_args.next() {
+                        // println!("{:#?}", val);
+                        knus::traits::DecodeScalar::decode(val, ctx)?
+                    } else {
+                        Some(true)
+                    };
+
+                    let commands = Some(children_to_commands(child, ctx)?);
+                    action.press = Some(Press { repeat, commands });
                 }
                 "@release" => {
-                    release = Some(children_to_commands(child, ctx)?);
+                    let commands = Some(children_to_commands(child, ctx)?);
+                    action.release = Some(Release { commands });
                 }
-                "@repeat" => {
-                    repeat = Some(children_to_commands(child, ctx)?);
+                _ => {
+                    ctx.emit_error(DecodeError::unexpected(
+                        child,
+                        "node",
+                        "only @press and @release or accepted",
+                    ));
                 }
-                _ => {}
             };
         }
-        let actions = Action {
-            press,
-            release,
-            repeat,
-        };
 
-        Ok(Self { key, actions })
+        Ok(Self {
+            key,
+            action,
+            swallow,
+        })
     }
 }
+
+#[derive(knus::Decode, Debug, Default, PartialEq, Hash, Serialize)]
+pub struct Action {
+    #[knus(child)]
+    pub press: Option<Press>,
+    #[knus(child)]
+    pub release: Option<Release>,
+}
+
+#[derive(knus::Decode, Debug, PartialEq, Hash, Serialize)]
+pub struct Press {
+    #[knus(property)]
+    pub repeat: Option<bool>,
+    // #[knus(children)]
+    pub commands: Option<Vec<String>>,
+}
+impl Default for Press {
+    fn default() -> Self {
+        Self {
+            repeat: Some(false),
+            commands: None,
+        }
+    }
+}
+
+#[derive(knus::Decode, Debug, Default, PartialEq, Hash, Serialize)]
+pub struct Release {
+    pub commands: Option<Vec<String>>,
+}
+
 pub fn children_to_commands<S: knus::traits::ErrorSpan>(
     node: &knus::ast::SpannedNode<S>,
     ctx: &mut knus::decode::Context<S>,
@@ -197,7 +297,9 @@ impl Config {
         Self::from_kdl(&path, &string)
     }
     pub fn from_kdl(path: &str, string: &str) -> Result<Self, MudrasError> {
-        let res: Config = knus::parse(path, string).unwrap();
+        let res: Config = knus::parse(path, string)
+            .map_err(miette::Report::new)
+            .unwrap();
         Ok(res)
     }
 }
