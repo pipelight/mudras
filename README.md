@@ -1,4 +1,4 @@
-# Mudras: a convenient hotkey daemon.
+# Mudras: A hotkey daemon for jonin.
 
 Currently in Alpha.
 

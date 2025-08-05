@@ -1,13 +1,16 @@
 mod config;
 mod error;
+mod input;
 
 use miette::{Error, IntoDiagnostic, MietteHandlerOpts, Result, RgbColors};
 
 use config::Config;
 
-fn main() -> Result<()> {
+#[tokio::main]
+async fn main() -> Result<()> {
     make_handler()?;
     let config = Config::get().into_diagnostic()?;
+    input::listen_keyboard().await?;
     println!("{:#?}", config);
     Ok(())
 }

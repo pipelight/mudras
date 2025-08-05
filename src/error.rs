@@ -11,6 +11,11 @@ pub enum MudrasError {
     #[error(transparent)]
     #[diagnostic(transparent)]
     WrapError(#[from] WrapError),
+    /// Lib native error
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    LibError(#[from] LibError),
+
     #[error(transparent)]
     #[diagnostic(code(io::error))]
     IoError(#[from] std::io::Error),
@@ -37,6 +42,26 @@ impl WrapError {
             message: msg.to_owned(),
             help: help.to_owned(),
             origin,
+        }
+    }
+}
+
+/// A root cause error with no inner origin
+#[derive(Debug, Error, Diagnostic)]
+#[error("{}", message)]
+#[diagnostic(code(virshle::lib::error))]
+pub struct LibError {
+    pub message: String,
+    #[help]
+    pub help: String,
+}
+#[bon]
+impl LibError {
+    #[builder]
+    pub fn new(msg: &str, help: &str) -> Self {
+        Self {
+            message: msg.to_owned(),
+            help: help.to_owned(),
         }
     }
 }

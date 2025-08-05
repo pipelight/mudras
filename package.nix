@@ -30,6 +30,9 @@ pkgs.rustPlatform.buildRustPackage rec {
     openssl
     pkg-config
 
+    # libs
+    udev
+
     # rust vmm uses latest stable and oxalica tend to lag behind.break
     # so we temporary force use of beta.
     (rust-bin.fromRustupToolchainFile ./rust-toolchain.toml)

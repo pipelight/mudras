@@ -1,3 +1,4 @@
+
 Super+Enter {
   @press {
     - "kitty -e fish"
@@ -26,6 +27,7 @@ Super {
     @press {
       - "niri msg move-column-right"
     }
+    test
   }
 
   // Exit the submap

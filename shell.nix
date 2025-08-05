@@ -4,11 +4,13 @@ pkgs.mkShell {
     openssl
     pkg-config
 
+    # libs
+    udev
+
     # rust vmm uses latest stable and oxalica tend to lag behind.break
     # so we temporary force use of beta.
 
     (rust-bin.fromRustupToolchainFile ./rust-toolchain.toml)
     rust-analyzer
   ];
-  # LIBCLANG_PATH = "${pkgs.llvmPackages.libclang.lib}/lib";
 }
