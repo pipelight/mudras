@@ -1,3 +1,9 @@
+// Common applications
+Super+Space {
+  @press {
+    - "yofi";
+  }
+}
 Super+Enter {
   @press {
     - "kitty -e fish"
@@ -7,16 +13,18 @@ Super+Enter {
   }
 }
 
+
+// Submap
 Super {
   @release {
     // enter a submap
-    @enter "niri"
+    @enter "window_manager"
   }
 }
 
 
 // Submap definition
-@submap name="niri" {
+@submap name="window_manager" {
   Ctrl+m {
     @press {
       - "niri msg move-column-left"
@@ -41,16 +49,14 @@ Super {
   }
 }
 
-// Common applications
-
-// @press Super+Space {
-//   yofi;
-// }
-//
-// // Common utils
-// @repeat XF86MonBrightnessUp { 
-//   light -A 10; 
-// }
-// @repeat XF86MonBrightnessDown { 
-//   light -U 10; 
-// }
+// Common utils
+XF86MonBrightnessUp {
+  @press repeat=true { 
+    - "light -A 10"; 
+  }
+}
+XF86MonBrightnessDown {
+  @press repeat=true { 
+    - "light -U 10"; 
+  }
+}

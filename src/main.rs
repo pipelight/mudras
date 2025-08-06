@@ -5,9 +5,11 @@ mod input;
 use miette::{Error, IntoDiagnostic, MietteHandlerOpts, Result, RgbColors};
 
 use config::Config;
+use env_logger;
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    env_logger::init();
     make_handler()?;
     let config = Config::get().into_diagnostic()?;
     input::listen_keyboard().await?;

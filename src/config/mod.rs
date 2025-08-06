@@ -1,3 +1,5 @@
+mod utils;
+
 // Config
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -256,10 +258,10 @@ impl Config {
         return path;
     }
     /// Get config from FHS path.
-    fn release_path() -> PathBuf {
+    fn release_path() -> Result<PathBuf, MudrasError> {
         let mut path = PathBuf::new();
-        path.push("/etc/mudras/config.kdl");
-        return path;
+        path.push(utils::shellexpand("/home/anon/.config/mudras/config.kdl")?);
+        Ok(path)
     }
     /// Return configuration from default file path.
     pub fn get() -> Result<Self, MudrasError> {
@@ -270,7 +272,7 @@ impl Config {
         let path = Self::debug_path();
 
         #[cfg(not(debug_assertions))]
-        let path = Self::release_path();
+        let path = Self::release_path()?;
 
         let path = path.display().to_string();
 
