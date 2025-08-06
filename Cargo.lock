@@ -350,6 +350,7 @@ dependencies = [
  "futures-core",
  "libc",
  "nix",
+ "serde",
  "tokio",
 ]
 

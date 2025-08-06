@@ -1,6 +1,8 @@
 mod uinput;
 mod utils;
 
+use std::path::PathBuf;
+
 // Signals
 use signal_hook::consts::signal::*;
 // use signal_hook::iterator::SignalsInfo;
@@ -10,13 +12,13 @@ use std::process::exit;
 
 // Keyboard
 use evdev::{AttributeSet, Device, EventStream, EventSummary, KeyCode};
-
+use std::collections::HashMap;
 use tokio::time::{sleep, Instant};
 use tokio::{pin, select, sync::mpsc};
 use tokio_stream::{StreamExt, StreamMap};
 use tokio_udev::{AsyncMonitorSocket, EventType, MonitorBuilder};
 
-use std::path::PathBuf;
+use utils::{KeyState, KeyboardState};
 
 // Error
 use crate::error::{LibError, MudrasError, WrapError};
@@ -67,6 +69,8 @@ pub async fn listen_keyboard() -> Result<(), MudrasError> {
         AsyncMonitorSocket::new(MonitorBuilder::new()?.match_subsystem("input")?.listen()?)?;
 
     let mut keyboard_stream_map: StreamMap<String, EventStream> = StreamMap::new();
+    let mut keyboard_states = HashMap::new();
+
     for (path, mut device) in keyboard_devices.into_iter() {
         let _ = device.grab();
         let path = match path.to_str() {
@@ -76,6 +80,7 @@ pub async fn listen_keyboard() -> Result<(), MudrasError> {
             }
         };
         keyboard_stream_map.insert(path.to_string(), device.into_event_stream()?);
+        keyboard_states.insert(path.to_string(), KeyboardState::default());
     }
 
     loop {
@@ -101,7 +106,7 @@ pub async fn listen_keyboard() -> Result<(), MudrasError> {
                         for mut device in evdev::enumerate().map(|(_, device)| device).filter(utils::check_device_is_keyboard) {
                             let _ = device.ungrab();
                         }
-                        log::warn!("Received SIGINT signal, exiting...");
+                        warn!("Received SIGINT signal, exiting...");
                         exit(1);
                     }
 
@@ -110,8 +115,8 @@ pub async fn listen_keyboard() -> Result<(), MudrasError> {
                             let _ = device.ungrab();
                         }
 
-                        log::warn!("Received signal: {:#?}", signal);
-                        log::warn!("Exiting...");
+                        warn!("Received signal: {:#?}", signal);
+                        warn!("Exiting...");
                         exit(1);
                     }
                 }
@@ -165,26 +170,22 @@ pub async fn listen_keyboard() -> Result<(), MudrasError> {
             }
             Some((node, Ok(event))) = keyboard_stream_map.next() => {
                 let key = match event.destructure() {
-                    EventSummary::Key(_,keycode,_) => {
-                        info!("{:#?}", keycode);
-                        keycode
+                    EventSummary::Key(_type, keycode, value) => {
+                        let state: KeyState = match value {
+                            0 => KeyState::Released,
+                            1 => KeyState::Pressed,
+                            _ =>  KeyState::Undefined
+                        };
+                        trace!("key={:#?},state={:#?}", keycode, state);
+
+                        // keyboard_states.get_mut(&node).current =
+
                     },
                     _ => {
                         continue
                     }
                 };
 
-                match event.value() {
-                    // Key press
-                    1 => {
-                    }
-
-                    // Key release
-                    0 => {
-                    }
-
-                    _ => {}
-                };
                 uinput_device.emit(&[event]).unwrap();
             }
         }

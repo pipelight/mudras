@@ -7,7 +7,7 @@ edition = "2021"
 bon = "3.6.5"
 dirs = "6.0.0"
 env_logger = "0.11.8"
-evdev = { version = "0.13.1", features = ["stream-trait", "tokio"] }
+evdev = { version = "0.13.1", features = ["serde", "stream-trait", "tokio"] }
 knus = "3.3.1"
 log = "0.4.27"
 miette = { version = "7.6.0", features = ["fancy"] }

@@ -1,4 +1,4 @@
-# Mudras: A hotkey daemon for jonin.
+# Mudras: A hotkey daemon for elite shinobi.
 
 Currently in Alpha.
 
@@ -134,7 +134,7 @@ cargo install --git https://github.com/pipelight/mudras
 ```nix
 # flake.nix
 inputs = {
-  virshle = {
+  mudras = {
       url = "github:pipelight/mudras";
   };
 };
@@ -148,9 +148,19 @@ environment.systemPackages = with pkgs; [
 
 ```
 
+Start with your favorite init script or window manager.
+
 # Alternatives
 
 Everything in here has been stolen from
 [niri](https://github.com/YaLTeR/niri)
 and
 [swhkd](https://github.com/waycrate/swhkd)
+
+# Developers
+
+```sh
+cargo build --release
+sudo RUST_LOG=debug ./target/release/mudras
+
+```
