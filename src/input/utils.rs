@@ -8,13 +8,13 @@ pub fn check_device_is_keyboard(device: &Device) -> bool {
         .supported_keys()
         .is_some_and(|keys| keys.contains(KeyCode::KEY_ENTER))
     {
-        if device.name() == Some("swhkd virtual output") {
+        if device.name() == Some("mudras virtual output") {
             return false;
         }
-        log::debug!("Keyboard: {}", device.name().unwrap(),);
+        log::debug!("Keyboard: {}", device.name().unwrap());
         true
     } else {
-        log::trace!("Other: {}", device.name().unwrap(),);
+        log::trace!("Other: {}", device.name().unwrap());
         false
     }
 }

@@ -92,16 +92,12 @@ pub async fn listen_keyboard() -> Result<(), MudrasError> {
                             let _ = device.ungrab();
                         }
                     }
-
                     SIGUSR2 => {
                         for mut device in evdev::enumerate().map(|(_, device)| device).filter(utils::check_device_is_keyboard) {
                             let _ = device.grab();
                         }
                     }
-
-                    SIGHUP => {
-                    }
-
+                    SIGHUP => {}
                     SIGINT => {
                         for mut device in evdev::enumerate().map(|(_, device)| device).filter(utils::check_device_is_keyboard) {
                             let _ = device.ungrab();
@@ -109,12 +105,10 @@ pub async fn listen_keyboard() -> Result<(), MudrasError> {
                         warn!("Received SIGINT signal, exiting...");
                         exit(1);
                     }
-
                     _ => {
                         for mut device in evdev::enumerate().map(|(_, device)| device).filter(utils::check_device_is_keyboard) {
-                            let _ = device.ungrab();
+                           let _ = device.ungrab();
                         }
-
                         warn!("Received signal: {:#?}", signal);
                         warn!("Exiting...");
                         exit(1);
@@ -151,13 +145,11 @@ pub async fn listen_keyboard() -> Result<(), MudrasError> {
                         if utils::check_device_is_keyboard(&device) {
                             info!("Device '{}' at '{}' added.", name, node);
                             let _ = device.grab();
-                            // keyboard_states.insert(node.to_string(), KeyboardState::new());
                             keyboard_stream_map.insert(node.to_string(), device.into_event_stream()?);
                         }
                     }
                     EventType::Remove => {
                         if keyboard_stream_map.contains_key(node) {
-                            // keyboard_states.remove(node);
                             let stream = keyboard_stream_map.remove(node).expect("device not in stream_map");
                             let name = stream.device().name().unwrap_or("[unknown]");
                             info!("Device '{}' at '{}' removed", name, node);
@@ -169,24 +161,33 @@ pub async fn listen_keyboard() -> Result<(), MudrasError> {
                 }
             }
             Some((node, Ok(event))) = keyboard_stream_map.next() => {
-                let key = match event.destructure() {
+                match event.destructure() {
+                    EventSummary::Switch(_, _, _) => {
+                        uinput_switches_device.emit(&[event]).unwrap();
+                        continue
+                    }
                     EventSummary::Key(_type, keycode, value) => {
-                        let state: KeyState = match value {
-                            0 => KeyState::Released,
-                            1 => KeyState::Pressed,
-                            _ =>  KeyState::Undefined
-                        };
-                        trace!("key={:#?},state={:#?}", keycode, state);
-
-                        // keyboard_states.get_mut(&node).current =
-
-                    },
+                        match value {
+                            // Key press
+                            1 => {
+                                let state = KeyState::Pressed;
+                                trace!("key={:#?},state={:#?}", keycode, state);
+                            }
+                            // Key release
+                            0 => {
+                                let state = KeyState::Released;
+                                trace!("key={:#?},state={:#?}", keycode, state);
+                            }
+                            _ => {}
+                        }
+                    }
                     _ => {
+                        uinput_device.emit(&[event]).unwrap();
                         continue
                     }
                 };
-
                 uinput_device.emit(&[event]).unwrap();
+                continue;
             }
         }
     }

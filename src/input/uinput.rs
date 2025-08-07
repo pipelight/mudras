@@ -14,7 +14,7 @@ pub fn create_uinput_device() -> Result<VirtualDevice, MudrasError> {
         get_all_relative_axes().iter().copied().collect();
 
     let device = VirtualDeviceBuilder::new()?
-        .name("swhkd virtual output")
+        .name("mudras virtual output")
         .with_keys(&keys)?
         .with_relative_axes(&relative_axes)?
         .build()?;
@@ -25,7 +25,7 @@ pub fn create_uinput_switches_device() -> Result<VirtualDevice, MudrasError> {
     let switches: AttributeSet<SwitchCode> = get_all_switches().iter().copied().collect();
 
     let device = VirtualDevice::builder()?
-        .name("swhkd switches virtual output")
+        .name("mudras switches virtual output")
         .with_switches(&switches)?
         .build()?;
     Ok(device)

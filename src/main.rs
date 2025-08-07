@@ -12,8 +12,8 @@ async fn main() -> Result<()> {
     env_logger::init();
     make_handler()?;
     let config = Config::get().into_diagnostic()?;
-    input::listen_keyboard().await?;
     println!("{:#?}", config);
+    input::listen_keyboard().await?;
     Ok(())
 }
 /// The make handler functions is executed right after the main function

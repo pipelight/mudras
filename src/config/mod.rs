@@ -39,12 +39,12 @@ where
             match &*node.node_name.to_string() {
                 "@submap" => {
                     let submap = Submap::decode_node(node, ctx)?;
-                    println!("{:#?}", submap);
+                    // println!("{:#?}", submap);
                     binds.push(Items::Submap(submap));
                 }
                 _ => {
                     let bind = Bind::decode_node(node, ctx)?;
-                    println!("{:#?}", bind);
+                    // println!("{:#?}", bind);
                     binds.push(Items::Bind(bind));
                 }
             };
