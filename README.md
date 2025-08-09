@@ -1,6 +1,6 @@
 # Mudras: A hotkey daemon for elite shinobi.
 
-Currently in Alpha.
+**Currently in Alpha.**
 
 A keyboard utility.
 It executes commands when a key combination is matched.
@@ -156,6 +156,11 @@ Everything in here has been stolen from
 [niri](https://github.com/YaLTeR/niri)
 and
 [swhkd](https://github.com/waycrate/swhkd)
+which are excellent alternatives to mudras.
+
+Thanks to @YaLTeR, @Shinyzenith and all other contributors
+for the relentless work and great code quality that
+benefit mudras.
 
 # Developers
 

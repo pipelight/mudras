@@ -1,6 +1,7 @@
 mod config;
 mod error;
 mod input;
+mod backend;
 
 use miette::{Error, IntoDiagnostic, MietteHandlerOpts, Result, RgbColors};
 
@@ -13,7 +14,7 @@ async fn main() -> Result<()> {
     make_handler()?;
     let config = Config::get().into_diagnostic()?;
     println!("{:#?}", config);
-    input::listen_keyboard().await?;
+    input::listen_keyboard(&config).await?;
     Ok(())
 }
 /// The make handler functions is executed right after the main function

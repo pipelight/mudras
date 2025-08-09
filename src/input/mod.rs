@@ -1,6 +1,8 @@
-mod uinput;
-mod utils;
+pub mod uinput;
+pub mod utils;
+pub mod wl;
 
+use crate::config::{Bind, Config, Items};
 use std::path::PathBuf;
 
 // Signals
@@ -25,7 +27,7 @@ use crate::error::{LibError, MudrasError, WrapError};
 use log::{debug, error, info, trace, warn};
 use miette::{Error, IntoDiagnostic, Result};
 
-pub async fn listen_keyboard() -> Result<(), MudrasError> {
+pub async fn listen_keyboard(config: &Config) -> Result<(), MudrasError> {
     let mut signals: SignalsInfo = SignalsInfo::new([
         SIGUSR1, SIGUSR2, SIGHUP, SIGABRT, SIGBUS, SIGCONT, SIGINT, SIGPIPE, SIGQUIT, SIGSYS,
         SIGTERM, SIGTRAP, SIGTSTP, SIGVTALRM, SIGXCPU, SIGXFSZ,
@@ -73,14 +75,20 @@ pub async fn listen_keyboard() -> Result<(), MudrasError> {
 
     for (path, mut device) in keyboard_devices.into_iter() {
         let _ = device.grab();
-        let path = match path.to_str() {
-            Some(p) => p,
-            None => {
-                continue;
-            }
-        };
+        let path = path.to_str().unwrap();
         keyboard_stream_map.insert(path.to_string(), device.into_event_stream()?);
         keyboard_states.insert(path.to_string(), KeyboardState::default());
+    }
+
+    // Match against bind
+    let mut binds: Vec<&Bind> = vec![];
+    for bind in &config.binds {
+        match bind {
+            Items::Bind(v) => {
+                binds.push(v);
+            }
+            Items::Submap(v) => {}
+        };
     }
 
     loop {
@@ -122,37 +130,28 @@ pub async fn listen_keyboard() -> Result<(), MudrasError> {
                     warn!("Received udev event with uninitialized device.");
                 }
 
-                let node = match event.devnode() {
-                    None => { continue; },
-                    Some(node) => {
-                        match node.to_str() {
-                            None => { continue; },
-                            Some(node) => node,
-                        }
-                    },
-                };
-
                 match event.event_type() {
                     EventType::Add => {
-                        let mut device = match Device::open(node) {
-                            Err(e) => {
-                                error!("Could not open evdev device at {}: {}", node, e);
-                                continue;
-                            },
-                            Ok(device) => device
-                        };
-                        let name = device.name().unwrap_or("[unknown]").to_string();
-                        if utils::check_device_is_keyboard(&device) {
-                            info!("Device '{}' at '{}' added.", name, node);
-                            let _ = device.grab();
-                            keyboard_stream_map.insert(node.to_string(), device.into_event_stream()?);
+                        if let Some(path) = event.devnode() {
+                            let node = path.to_str().unwrap();
+                            if let Some(mut device) = Device::open(node).ok() {
+                                let name = device.name().unwrap_or("[unknown]").to_string();
+                                if utils::check_device_is_keyboard(&device) {
+                                    info!("Device '{}' at '{}' added.", name, node);
+                                    let _ = device.grab();
+                                    keyboard_stream_map.insert(node.to_string(), device.into_event_stream()?);
+                                }
+                            }
                         }
                     }
                     EventType::Remove => {
-                        if keyboard_stream_map.contains_key(node) {
-                            let stream = keyboard_stream_map.remove(node).expect("device not in stream_map");
-                            let name = stream.device().name().unwrap_or("[unknown]");
-                            info!("Device '{}' at '{}' removed", name, node);
+                        if let Some(path) = event.devnode() {
+                            let node = path.to_str().unwrap();
+                            if keyboard_stream_map.contains_key(node) {
+                                let stream = keyboard_stream_map.remove(node).expect("device not in stream_map");
+                                let name = stream.device().name().unwrap_or("[unknown]");
+                                info!("Device '{}' at '{}' removed", name, node);
+                            }
                         }
                     }
                     _ => {
@@ -160,11 +159,10 @@ pub async fn listen_keyboard() -> Result<(), MudrasError> {
                     }
                 }
             }
-            Some((node, Ok(event))) = keyboard_stream_map.next() => {
+            Some((path, Ok(event))) = keyboard_stream_map.next() => {
                 match event.destructure() {
                     EventSummary::Switch(_, _, _) => {
                         uinput_switches_device.emit(&[event]).unwrap();
-                        continue
                     }
                     EventSummary::Key(_type, keycode, value) => {
                         match value {
@@ -172,35 +170,44 @@ pub async fn listen_keyboard() -> Result<(), MudrasError> {
                             1 => {
                                 let state = KeyState::Pressed;
                                 trace!("key={:#?},state={:#?}", keycode, state);
+
+                                if let Some(keyboard_state) = keyboard_states.get_mut(&path) {
+                                    keyboard_state.previous = keyboard_state.current.clone();
+                                    for (key,value) in &keyboard_state.current.keys.clone() {
+                                        if value == &KeyState::Released {
+                                            keyboard_state.current.keys.remove(&key);
+                                        }
+                                    }
+                                    keyboard_state.current.keys.insert(keycode,state);
+                                    // debug!("{:#?}", keyboard_state);
+                                }
                             }
                             // Key release
                             0 => {
                                 let state = KeyState::Released;
                                 trace!("key={:#?},state={:#?}", keycode, state);
+
+                                if let Some(keyboard_state) = keyboard_states.get_mut(&path) {
+                                    keyboard_state.previous = keyboard_state.current.clone();
+                                    for (key,value) in &keyboard_state.current.keys.clone() {
+                                        if value == &KeyState::Released {
+                                            keyboard_state.current.keys.remove(&key);
+                                        }
+                                    }
+                                    keyboard_state.current.keys.insert(keycode,state);
+                                }
                             }
                             _ => {}
                         }
                     }
-                    _ => {
-                        uinput_device.emit(&[event]).unwrap();
-                        continue
-                    }
+                    _ => {}
                 };
+
+                if let Some(keyboard_state) = keyboard_states.get_mut(&path) {
+                    utils::do_trigger_press(binds.clone(),keyboard_state).unwrap();
+                }
                 uinput_device.emit(&[event]).unwrap();
-                continue;
             }
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use miette::Result;
-
-    #[tokio::test]
-    async fn test_listen_keyboard_events() -> Result<()> {
-        listen_keyboard().await?;
-        Ok(())
     }
 }

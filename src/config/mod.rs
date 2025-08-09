@@ -1,5 +1,7 @@
 mod utils;
 
+use evdev::KeyCode;
+
 // Config
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -17,7 +19,7 @@ use miette::{Error, IntoDiagnostic, Result};
 
 #[derive(Debug, PartialEq, Serialize)]
 pub struct Config {
-    binds: Vec<Items>,
+    pub binds: Vec<Items>,
 }
 
 #[derive(Debug, PartialEq, Serialize)]
@@ -88,9 +90,9 @@ where
 
 #[derive(Debug, PartialEq, Serialize)]
 pub struct Bind {
-    pub key: String,
+    pub sequence: Vec<KeyCode>,
     // #[serde(flatten)]
-    pub action: Action,
+    pub action: KeyAction,
     // Exta properties
     /// Whether the keys must be passed to underlying applications
     /// Default to true (keys are not passed)
@@ -99,8 +101,8 @@ pub struct Bind {
 impl Default for Bind {
     fn default() -> Self {
         Self {
-            key: String::default(),
-            action: Action::default(),
+            sequence: utils::bind_to_keys(&String::default()).unwrap(),
+            action: KeyAction::default(),
             swallow: Some(true),
         }
     }
@@ -113,7 +115,7 @@ where
         node: &knus::ast::SpannedNode<S>,
         ctx: &mut knus::decode::Context<S>,
     ) -> Result<Self, DecodeError<S>> {
-        let key = node.node_name.to_string();
+        let sequence = utils::bind_to_keys(&node.node_name.to_string()).unwrap();
 
         // Global args
         let mut swallow = Some(true); // default
@@ -126,7 +128,7 @@ where
             }
         }
 
-        let mut action = Action::default();
+        let mut action = KeyAction::default();
         for child in node.children() {
             let name: String = child.node_name.to_string();
             match &*name {
@@ -157,7 +159,7 @@ where
         }
 
         Ok(Self {
-            key,
+            sequence,
             action,
             swallow,
         })
@@ -165,7 +167,7 @@ where
 }
 
 #[derive(knus::Decode, Debug, Default, PartialEq, Hash, Serialize)]
-pub struct Action {
+pub struct KeyAction {
     #[knus(child)]
     pub press: Option<Press>,
     #[knus(child)]
@@ -280,7 +282,7 @@ impl Config {
             Ok(v) => v,
             Err(e) => {
                 let message = format!("Couldn't find a configuration file.",);
-                let help = format!("Create a configuration file at /etc/virshle/confi.toml");
+                let help = format!("Create a configuration file at ~/.config/mudras.kdl");
                 let err = WrapError::builder()
                     .msg(&message)
                     .help(&help)

@@ -49,7 +49,7 @@ impl WrapError {
 /// A root cause error with no inner origin
 #[derive(Debug, Error, Diagnostic)]
 #[error("{}", message)]
-#[diagnostic(code(virshle::lib::error))]
+#[diagnostic(code(lib::error))]
 pub struct LibError {
     pub message: String,
     #[help]
