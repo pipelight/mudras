@@ -30,7 +30,7 @@ pub struct State {
     pub event_loop: LoopHandle<'static, State>,
     pub stop_signal: LoopSignal,
     pub devices: HashSet<Device>,
-    // pub seat: Seat<State>,
+    pub seat: Seat<State>,
 }
 
 impl State {
@@ -45,17 +45,17 @@ impl State {
         let backend = Tty::new(config.clone(), event_loop.clone()).unwrap();
         let devices = HashSet::new();
 
-        // let mut seat_state = SeatState::new();
-        // let mut seat: Seat<State> = seat_state.new_seat("tty");
-        // seat.add_keyboard(
-        //     XkbConfig {
-        //         layout: "us",
-        //         ..XkbConfig::default()
-        //     },
-        //     200,
-        //     25,
-        // )
-        // .unwrap();
+        let mut seat_state = SeatState::new();
+        let mut seat: Seat<State> = seat_state.new_seat("tty");
+        seat.add_keyboard(
+            XkbConfig {
+                layout: "us",
+                ..XkbConfig::default()
+            },
+            200,
+            25,
+        )
+        .unwrap();
 
         let state = Self {
             config,
@@ -119,9 +119,9 @@ impl State {
         //     return;
         // };
 
-        // if !pressed {
-        //     return;
-        // }
+        if !pressed {
+            return;
+        }
 
         // self.handle_bind(bind.clone());
         // self.start_key_repeat(bind);
@@ -130,6 +130,39 @@ impl State {
     fn start_key_repeat(&mut self, bind: Bind) {}
     pub fn handle_bind(&mut self, bind: Bind) {}
     // pub fn do_action(&mut self, action: Action, allow_when_locked: bool) {}
+}
+
+impl SeatHandler for State {
+    type KeyboardFocus = WlSurface;
+    type PointerFocus = WlSurface;
+    type TouchFocus = WlSurface;
+
+    fn seat_state(&mut self) -> &mut SeatState<State> {
+        &mut self.seat_state
+    }
+
+    fn cursor_image(&mut self, _seat: &Seat<Self>, mut image: CursorImageStatus) {
+    }
+
+    fn focus_changed(&mut self, seat: &Seat<Self>, focused: Option<&WlSurface>) {
+        let dh = &self.niri.display_handle;
+        let client = focused.and_then(|s| dh.get_client(s.id()).ok());
+        set_data_device_focus(dh, seat, client.clone());
+        set_primary_focus(dh, seat, client);
+    }
+
+    fn led_state_changed(&mut self, _seat: &Seat<Self>, led_state: keyboard::LedState) {
+        let keyboards = self
+            .niri
+            .devices
+            .iter()
+            .filter(|device| device.has_capability(input::DeviceCapability::Keyboard))
+            .cloned();
+
+        for mut keyboard in keyboards {
+            keyboard.led_update(led_state.into());
+        }
+    }
 }
 
 #[cfg(test)]

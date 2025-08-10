@@ -45,7 +45,7 @@ impl Tty {
         let udev_backend =
             UdevBackend::new(session.seat()).context("error creating a udev backend")?;
         let udev_dispatcher = Dispatcher::new(udev_backend, move |event, _, state: &mut State| {
-            state.backend.tty().on_udev_event(&mut state, event);
+            state.backend.on_udev_event(&mut state, event);
         });
         event_loop
             .register_dispatcher(udev_dispatcher.clone())
@@ -55,18 +55,11 @@ impl Tty {
         libinput
             .udev_assign_seat(&seat_name)
             .map_err(|()| miette!("error assigning the seat to libinput"))?;
-
         let input_backend = LibinputInputBackend::new(libinput.clone());
         event_loop
             .insert_source(input_backend, |mut event, _, state| {
                 state.process_libinput_event(&mut event);
                 state.process_input_event(event);
-            })
-            .unwrap();
-
-        event_loop
-            .insert_source(notifier, move |event, _, state| {
-                state.backend.tty().on_session_event(&mut state, event);
             })
             .unwrap();
 
@@ -77,5 +70,20 @@ impl Tty {
             libinput,
             // devices: HashMap::new(),
         })
+    }
+    fn on_udev_event(&mut self, niri: &mut Niri, event: UdevEvent) {
+        match event {
+            UdevEvent::Added { device_id, path } => {
+                // if let Err(err) = self.device_added(device_id, &path, niri) {
+                //     warn!("error adding device: {err:?}");
+                // }
+            }
+            UdevEvent::Changed { device_id } => {
+                // self.device_changed(device_id, niri)
+            }
+            UdevEvent::Removed { device_id } => {
+                // self.device_removed(device_id, niri)
+            }
+        }
     }
 }
