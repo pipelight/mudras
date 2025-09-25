@@ -3,8 +3,8 @@ use std::path::Path;
 
 // Error
 use crate::error::{LibError, MudrasError};
-use log::{error, trace};
 use miette::{Error, IntoDiagnostic, Result};
+use tracing::{error, trace};
 
 /// Expand tild "~" in file path.
 pub fn shellexpand(relpath: &str) -> Result<String, MudrasError> {

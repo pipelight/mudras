@@ -1,6 +1,8 @@
 pub mod uinput;
 pub mod utils;
-pub mod wl;
+
+// Deprecated smithay (Wayland)
+// pub mod wl;
 
 use crate::config::{Bind, Config, Items};
 use std::path::PathBuf;
@@ -24,8 +26,8 @@ use utils::{KeyState, KeyboardState};
 
 // Error
 use crate::error::{LibError, MudrasError, WrapError};
-use log::{debug, error, info, trace, warn};
-use miette::{Error, IntoDiagnostic, Result};
+use miette::{Error, Result};
+use tracing::{debug, error, info, trace, warn};
 
 pub async fn listen_keyboard(config: &Config) -> Result<(), MudrasError> {
     let mut signals: SignalsInfo = SignalsInfo::new([
@@ -125,7 +127,9 @@ pub async fn listen_keyboard(config: &Config) -> Result<(), MudrasError> {
             }
 
             // Device detection
+            // Adds every keyboard to the global stream map.
             Some(Ok(event)) = udev.next() => {
+
                 if !event.is_initialized() {
                     warn!("Received udev event with uninitialized device.");
                 }
@@ -172,6 +176,7 @@ pub async fn listen_keyboard(config: &Config) -> Result<(), MudrasError> {
                                 trace!("key={:#?},state={:#?}", keycode, state);
 
                                 if let Some(keyboard_state) = keyboard_states.get_mut(&path) {
+                                    // Update keyboard representation state.
                                     keyboard_state.previous = keyboard_state.current.clone();
                                     for (key,value) in &keyboard_state.current.keys.clone() {
                                         if value == &KeyState::Released {
@@ -179,7 +184,8 @@ pub async fn listen_keyboard(config: &Config) -> Result<(), MudrasError> {
                                         }
                                     }
                                     keyboard_state.current.keys.insert(keycode,state);
-                                    // debug!("{:#?}", keyboard_state);
+                                    // Trigger binding
+                                    utils::do_trigger_press(binds.clone(),keyboard_state).unwrap();
                                 }
                             }
                             // Key release
@@ -188,6 +194,7 @@ pub async fn listen_keyboard(config: &Config) -> Result<(), MudrasError> {
                                 trace!("key={:#?},state={:#?}", keycode, state);
 
                                 if let Some(keyboard_state) = keyboard_states.get_mut(&path) {
+                                    // Update keyboard representation state.
                                     keyboard_state.previous = keyboard_state.current.clone();
                                     for (key,value) in &keyboard_state.current.keys.clone() {
                                         if value == &KeyState::Released {
@@ -195,6 +202,8 @@ pub async fn listen_keyboard(config: &Config) -> Result<(), MudrasError> {
                                         }
                                     }
                                     keyboard_state.current.keys.insert(keycode,state);
+                                    // Trigger binding
+                                    // utils::do_trigger_release(binds.clone(),keyboard_state).unwrap();
                                 }
                             }
                             _ => {}
@@ -203,9 +212,6 @@ pub async fn listen_keyboard(config: &Config) -> Result<(), MudrasError> {
                     _ => {}
                 };
 
-                if let Some(keyboard_state) = keyboard_states.get_mut(&path) {
-                    utils::do_trigger_press(binds.clone(),keyboard_state).unwrap();
-                }
                 uinput_device.emit(&[event]).unwrap();
             }
         }

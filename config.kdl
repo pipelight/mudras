@@ -4,9 +4,14 @@ Super+Space {
     - "yofi";
   }
 }
+Super+q {
+  @press {
+    - r#"niri msg action "close-window""#
+  }
+}
 Super+Enter {
   @press {
-    // - "kitty -e fish"
+    - "kitty -e fish"
     - r#"notify-send "new term""#
   }
 }
@@ -14,7 +19,8 @@ Super+Enter {
 // Test
 Super+T {
   @press {
-    - r#"notify-send "new term""#
+    - "kitty -e fish"
+    - r#"notify-send "testing command""#
   }
 }
 
@@ -23,6 +29,7 @@ Super+T {
 Super {
   @release {
     // enter a submap
+    - r#"niri msg action "open-overview""#
     @enter "window_manager"
   }
 }
@@ -32,6 +39,7 @@ Super {
 @submap name="window_manager" {
   Ctrl+m {
     @press {
+      - "notify-send 'niri mcl'"
       - "niri msg move-column-left"
     }
   }

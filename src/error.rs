@@ -1,6 +1,6 @@
-use log::error;
-use miette::{Diagnostic, Report};
+use miette::{Diagnostic, MietteHandlerOpts, Report, Result, RgbColors};
 use thiserror::Error;
+use tracing::error;
 
 // Error builder
 use bon::bon;
@@ -64,4 +64,23 @@ impl LibError {
             help: help.to_owned(),
         }
     }
+}
+/// The make handler functions is executed right after the main function
+/// to set up a verbose and colorful error/panic handler.
+pub fn make_handler() -> Result<(), MudrasError> {
+    miette::set_hook(Box::new(|_| {
+        Box::new(
+            MietteHandlerOpts::new()
+                .rgb_colors(RgbColors::Never)
+                .color(true)
+                .unicode(true)
+                .terminal_links(true)
+                .context_lines(3)
+                .with_cause_chain()
+                .build(),
+        )
+    }))
+    .unwrap();
+    miette::set_panic_hook();
+    Ok(())
 }

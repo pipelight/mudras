@@ -1,4 +1,4 @@
-use crate::config::Bind;
+use crate::config::{Bind, Command, Keyword};
 use pipelight_exec::Process;
 
 use evdev::{Device, KeyCode};
@@ -8,8 +8,8 @@ use std::collections::HashMap;
 
 // Error
 use crate::error::{LibError, MudrasError, WrapError};
-use log::{debug, error, info, trace, warn};
-use miette::{Error, IntoDiagnostic, Result};
+use miette::{Error, Result};
+use tracing::{debug, error, info, trace, warn};
 
 pub fn check_device_is_keyboard(device: &Device) -> bool {
     if device
@@ -19,10 +19,10 @@ pub fn check_device_is_keyboard(device: &Device) -> bool {
         if device.name() == Some("mudras virtual output") {
             return false;
         }
-        log::debug!("Keyboard: {}", device.name().unwrap());
+        debug!("Keyboard: {}", device.name().unwrap());
         true
     } else {
-        log::trace!("Other: {}", device.name().unwrap());
+        trace!("Other: {}", device.name().unwrap());
         false
     }
 }
@@ -71,12 +71,21 @@ pub fn do_trigger_press(
         // info!("bind = {:#?}", sequence);
 
         if sequence == current_keys {
-            info!("triggerd bind = {:#?}", bind);
+            trace!("triggered bind = {:#?}", bind);
             if let Some(press) = &bind.action.press {
                 if let Some(commands) = &press.commands {
                     for cmd in commands {
-                        let mut p = Process::new().stdin(&cmd).term().background().to_owned();
-                        p.run().unwrap();
+                        match cmd {
+                            Command::Sh(stdin) => {
+                                let mut p =
+                                    Process::new().stdin(&stdin).term().background().to_owned();
+                                p.run().unwrap();
+                            }
+                            Command::Internal(e) => match e {
+                                Keyword::Enter(submap) => {}
+                                Keyword::Exit => {}
+                            },
+                        }
                     }
                 }
             }

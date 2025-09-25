@@ -14,8 +14,8 @@ use knus::{Decode, DecodeChildren};
 
 // Error
 use crate::error::{MudrasError, WrapError};
-use log::{error, trace};
 use miette::{Error, IntoDiagnostic, Result};
+use tracing::{error, trace};
 
 #[derive(Debug, PartialEq, Serialize)]
 pub struct Config {
@@ -179,7 +179,7 @@ pub struct Press {
     #[knus(property)]
     pub repeat: Option<bool>,
     // #[knus(children)]
-    pub commands: Option<Vec<String>>,
+    pub commands: Option<Vec<Command>>,
 }
 impl Default for Press {
     fn default() -> Self {
@@ -192,18 +192,41 @@ impl Default for Press {
 
 #[derive(knus::Decode, Debug, Default, PartialEq, Hash, Serialize)]
 pub struct Release {
-    pub commands: Option<Vec<String>>,
+    pub commands: Option<Vec<Command>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Hash, Serialize, Deserialize)]
+pub enum Command {
+    /// To be executed from a terminal
+    Sh(String),
+    /// Mudras internal special command
+    Internal(Keyword),
+}
+
+#[derive(Debug, Clone, PartialEq, Hash, Serialize, Deserialize)]
+pub enum Keyword {
+    Enter(String),
+    Exit,
 }
 
 pub fn children_to_commands<S: knus::traits::ErrorSpan>(
     node: &knus::ast::SpannedNode<S>,
     ctx: &mut knus::decode::Context<S>,
-) -> Result<Vec<String>, DecodeError<S>> {
-    let mut commands: Vec<String> = vec![];
+) -> Result<Vec<Command>, DecodeError<S>> {
+    let mut commands: Vec<Command> = vec![];
     for child in node.children() {
         if child.node_name.to_string() == "-" {
+            // Common bash instruction.
             let cmd: String = parse_arg_node("-", child, ctx)?;
-            commands.push(cmd);
+            commands.push(Command::Sh(cmd));
+        } else if child.node_name.to_string() == "@enter" {
+            // Special keyword for entering submap.
+            let value = child.arguments.first().unwrap();
+            let submap_name = knus::traits::DecodeScalar::decode(value, ctx)?;
+            commands.push(Command::Internal(Keyword::Enter(submap_name)));
+        } else if child.node_name.to_string() == "@exit" {
+            // Special keyword for exiting submap.
+            commands.push(Command::Internal(Keyword::Exit));
         }
     }
     Ok(commands)
@@ -294,6 +317,7 @@ impl Config {
             }
         };
         trace!("Found config file.");
+        trace!("{:#?}", config);
         Ok(config)
     }
     pub fn from_file(path: &str) -> Result<Self, MudrasError> {

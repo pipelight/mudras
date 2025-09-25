@@ -4,8 +4,8 @@ use evdev::{
 };
 // Error
 use crate::error::{LibError, MudrasError, WrapError};
-use log::{debug, error, info, trace, warn};
 use miette::{Error, IntoDiagnostic, Result};
+use tracing::{debug, error, info, trace, warn};
 
 pub fn create_uinput_device() -> Result<VirtualDevice, MudrasError> {
     let keys: AttributeSet<KeyCode> = get_all_keys().iter().copied().collect();
