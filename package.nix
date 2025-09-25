@@ -5,7 +5,7 @@
 }:
 pkgs.rustPlatform.buildRustPackage rec {
   pname = "mudras";
-  version = (builtins.fromTOML (lib.readFile ./${pname}/Cargo.toml)).package.version;
+  version = (builtins.fromTOML (lib.readFile ./Cargo.toml)).package.version;
 
   src = ./.;
   cargoLock = {
@@ -37,13 +37,4 @@ pkgs.rustPlatform.buildRustPackage rec {
     # so we temporary force use of beta.
     (rust-bin.fromRustupToolchainFile ./rust-toolchain.toml)
   ];
-
-  LIBCLANG_PATH = "${pkgs.llvmPackages.libclang.lib}/lib";
-
-  postInstall = with lib; ''
-    installShellCompletion --cmd ${pname}\
-      --bash ./autocompletion/${pname}.bash \
-      --fish ./autocompletion/${pname}.fish \
-      --zsh  ./autocompletion/_${pname}
-  '';
 }
