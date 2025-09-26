@@ -17,12 +17,12 @@ use crate::error::{MudrasError, WrapError};
 use miette::{Error, IntoDiagnostic, Result};
 use tracing::{error, trace};
 
-#[derive(Debug, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Config {
     pub binds: Vec<Items>,
 }
 
-#[derive(Debug, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub enum Items {
     Bind(Bind),
     Submap(Submap),
@@ -55,7 +55,7 @@ where
     }
 }
 
-#[derive(Default, Debug, PartialEq, Serialize)]
+#[derive(Default, Clone, Debug, PartialEq, Serialize)]
 pub struct Submap {
     pub name: String,
     pub binds: Vec<Bind>,
@@ -88,7 +88,7 @@ where
     }
 }
 
-#[derive(Debug, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Bind {
     pub sequence: Vec<KeyCode>,
     // #[serde(flatten)]
@@ -166,7 +166,7 @@ where
     }
 }
 
-#[derive(knus::Decode, Debug, Default, PartialEq, Hash, Serialize)]
+#[derive(knus::Decode, Debug, Clone, Default, PartialEq, Hash, Serialize)]
 pub struct KeyAction {
     #[knus(child)]
     pub press: Option<Press>,
@@ -174,7 +174,7 @@ pub struct KeyAction {
     pub release: Option<Release>,
 }
 
-#[derive(knus::Decode, Debug, PartialEq, Hash, Serialize)]
+#[derive(knus::Decode, Debug, Clone, PartialEq, Hash, Serialize)]
 pub struct Press {
     #[knus(property)]
     pub repeat: Option<bool>,
@@ -190,7 +190,7 @@ impl Default for Press {
     }
 }
 
-#[derive(knus::Decode, Debug, Default, PartialEq, Hash, Serialize)]
+#[derive(knus::Decode, Debug, Clone, Default, PartialEq, Hash, Serialize)]
 pub struct Release {
     pub commands: Option<Vec<Command>>,
 }

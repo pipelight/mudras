@@ -39,6 +39,9 @@ pub fn bind_to_keys(bind: &str) -> Result<Vec<KeyCode>, MudrasError> {
             "alt" => evdev::KeyCode::KEY_LEFTALT,
             "tab" => evdev::KeyCode::KEY_TAB,
             "backspace" => evdev::KeyCode::KEY_BACKSPACE,
+            "shift" => evdev::KeyCode::KEY_LEFTSHIFT,
+            "shift_l" => evdev::KeyCode::KEY_LEFTSHIFT,
+            "shift_r" => evdev::KeyCode::KEY_RIGHTSHIFT,
             "enter" => evdev::KeyCode::KEY_ENTER,
             "space" => evdev::KeyCode::KEY_SPACE,
 

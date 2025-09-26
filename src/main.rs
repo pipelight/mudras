@@ -2,6 +2,7 @@ mod cli;
 mod config;
 mod error;
 mod input;
+mod server;
 
 // Error handling
 use error::MudrasError;

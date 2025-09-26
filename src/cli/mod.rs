@@ -2,6 +2,7 @@ mod utils;
 
 use crate::config::Config;
 use crate::input;
+use crate::server::Server;
 
 use clap::{Args, Parser, Subcommand, ValueEnum, ValueHint};
 use clap_verbosity_flag::{InfoLevel, Verbosity};
@@ -41,7 +42,8 @@ impl Cli {
             Commands::Run => {
                 info!("Running node.");
                 let config = Config::get()?;
-                input::listen_keyboard(&config).await?;
+                let mut server = Server::builder().config(config).build().await?;
+                server.run().await?;
                 Ok(())
             }
         }

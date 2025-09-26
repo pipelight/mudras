@@ -24,6 +24,53 @@ Super+T {
   }
 }
 
+// Resize windows
+Super+Shift_L+m {
+  @press {
+    - r#"notify-send "resize window""#
+    - r#"niri msg action "switch-preset-window-width-back""#
+  }
+}
+Super+Shift_L+n {
+  @press {
+    - r#"notify-send "resize window""#
+    - r#"niri msg action "switch-preset-window-height""#
+  }
+}
+Super+Shift_L+e {
+  @press {
+    - r#"notify-send "resize window""#
+    - r#"niri msg action "switch-preset-window-height-back""#
+  }
+}
+Super+Shift_L+i {
+  @press {
+    - r#"notify-send "resize window""#
+    - r#"niri msg action "switch-preset-window-width""#
+  }
+}
+
+// Super+m { 
+//   @press {
+//     - r#"niri msg action "focus-column-left""#; 
+//   }
+// } 
+// Super+n { 
+//   @press {
+//     - r#"niri msg action "focus-window-down""#; 
+//   }
+// } 
+// Super+n { 
+//   @press {
+//     - r#"niri msg action "focus-window-up""#; 
+//   }
+// } 
+// Super+i { 
+//   @press {
+//     - r#"niri msg action "focus-column-right""#; 
+//   }
+// } 
+
 
 // Submap
 Super {
