@@ -1,5 +1,5 @@
 // Common applications
-Super+Space {
+Super+Space{
   @press {
     - "yofi";
   }
@@ -12,7 +12,7 @@ Super+q {
 Super+Enter {
   @press {
     - "kitty -e fish"
-    - r#"notify-send "new term""#
+    - r#"notify-send -a mudras "new term""#
   }
 }
 
@@ -20,32 +20,32 @@ Super+Enter {
 Super+T {
   @press {
     - "kitty -e fish"
-    - r#"notify-send "testing command""#
+    - r#"notify-send -a mudras "testing command""#
   }
 }
 
 // Resize windows
 Super+Shift_L+m {
   @press {
-    - r#"notify-send "resize window""#
+    - r#"notify-send -a mudras "resize window""#
     - r#"niri msg action "switch-preset-window-width-back""#
   }
 }
 Super+Shift_L+n {
   @press {
-    - r#"notify-send "resize window""#
+    - r#"notify-send -a mudras "resize window""#
     - r#"niri msg action "switch-preset-window-height""#
   }
 }
 Super+Shift_L+e {
   @press {
-    - r#"notify-send "resize window""#
+    - r#"notify-send -a mudras "resize window""#
     - r#"niri msg action "switch-preset-window-height-back""#
   }
 }
 Super+Shift_L+i {
   @press {
-    - r#"notify-send "resize window""#
+    - r#"notify-send -a mudras "resize window""#
     - r#"niri msg action "switch-preset-window-width""#
   }
 }

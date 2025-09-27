@@ -1,5 +1,7 @@
 // Listen to keyboard events
 mod keyboard;
-mod uinput;
+mod virtuals;
+// Hot plug device detection
+mod udev;
 
 pub mod utils;

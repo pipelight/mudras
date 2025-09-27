@@ -1,3 +1,4 @@
+use super::Bind;
 use evdev::KeyCode;
 use std::path::Path;
 
@@ -5,6 +6,17 @@ use std::path::Path;
 use crate::error::{LibError, MudrasError};
 use miette::{Error, IntoDiagnostic, Result};
 use tracing::{error, trace};
+
+pub fn get_modifiers(binds: &Vec<Bind>) -> Result<Vec<evdev::KeyCode>, MudrasError> {
+    let mut mods = vec![];
+    for bind in binds.clone() {
+        if let Some(first_key) = bind.sequence.first() {
+            mods.push(*first_key);
+        }
+    }
+    mods.dedup();
+    Ok(mods)
+}
 
 /// Expand tild "~" in file path.
 pub fn shellexpand(relpath: &str) -> Result<String, MudrasError> {

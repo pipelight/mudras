@@ -1,7 +1,7 @@
-use crate::config::{Bind, Command, Keyword};
+use crate::config::{Bind, Command, KeyAction, Keyword};
 use pipelight_exec::Process;
 
-use evdev::{Device, KeyCode};
+use evdev::{AbsoluteAxisCode, Device, KeyCode};
 use serde::{Deserialize, Serialize};
 
 use std::collections::HashMap;
@@ -16,13 +16,24 @@ pub fn check_device_is_keyboard(device: &Device) -> bool {
         .supported_keys()
         .is_some_and(|keys| keys.contains(KeyCode::KEY_ENTER))
     {
-        if device.name() == Some("mudras virtual output") {
+        if device.name() == Some("Mudras virtual keyboard") {
             return false;
         }
-        debug!("Keyboard: {}", device.name().unwrap());
         true
     } else {
-        trace!("Other: {}", device.name().unwrap());
+        false
+    }
+}
+pub fn check_device_is_pointer(device: &Device) -> bool {
+    if device
+        .supported_absolute_axes()
+        .is_some_and(|axes| axes.contains(AbsoluteAxisCode::ABS_X))
+    {
+        if device.name() == Some("Mudras virtual pointer") {
+            return false;
+        }
+        true
+    } else {
         false
     }
 }
@@ -49,28 +60,62 @@ pub enum KeyState {
     Undefined,
 }
 
-/// Compare keybard state and binds
-pub fn do_trigger_press(
-    binds: Vec<&Bind>,
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub struct SubmapState {
+    pub submaps: HashMap<String, Vec<Bind>>,
+    pub current: String,
+}
+impl Default for SubmapState {
+    fn default() -> Self {
+        Self {
+            submaps: HashMap::new(),
+            current: "main".to_owned(),
+        }
+    }
+}
+
+/// Compare keyboard state and binds.
+pub fn trigger_action(
+    submaps_state: &mut SubmapState,
     keyboard_state: &KeyboardState,
 ) -> Result<(), MudrasError> {
     // Sort current keyboard keys sequence
-    let mut current_keys: Vec<KeyCode> = keyboard_state
+    let current_keys: Vec<KeyCode> = keyboard_state
         .current
         .keys
-        .iter()
-        .map(|(k, _)| k.to_owned())
+        .clone()
+        .into_iter()
+        .map(|(k, _)| k)
         .collect();
-    current_keys.sort();
+    let mut sorted_current_keys = current_keys.clone();
+    sorted_current_keys.sort();
+
     // info!("current = {:#?}", current_keys);
+    let current_submap = submaps_state.current.clone();
+    let binds = submaps_state.submaps.get(&current_submap).unwrap();
+    let mut sorted_binds = binds.clone();
+    sorted_binds.iter_mut().for_each(|e| e.sequence.sort());
+
+    let current_keys_and_state: Vec<(KeyCode, KeyState)> =
+        keyboard_state.current.keys.clone().into_iter().collect();
 
     for bind in binds {
         // Sort bind key sequence
-        let mut sequence: Vec<KeyCode> = bind.sequence.clone();
-        sequence.sort();
-        // info!("bind = {:#?}", sequence);
+        let sequence: Vec<KeyCode> = bind.sequence.clone();
 
-        if sequence == current_keys {
+        // info!("bind = {:#?}", sequence);
+        let mut sorted_sequence = sequence.clone();
+        sorted_sequence.sort();
+
+        // A bind sequence is matched against the current keyboard keys
+        let sorted_binds_keys: Vec<Vec<KeyCode>> =
+            sorted_binds.iter().map(|e| e.sequence.clone()).collect();
+
+        if sorted_binds_keys.contains(&sorted_current_keys) {
+            // A bind seq is matched against current key states
+            if let Some(action) = &bind.action.press {};
+            if let Some(action) = &bind.action.release {};
+
             trace!("triggered bind = {:#?}", bind);
             if let Some(press) = &bind.action.press {
                 if let Some(commands) = &press.commands {

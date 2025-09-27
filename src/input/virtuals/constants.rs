@@ -1,35 +1,8 @@
 use evdev::{
     uinput::{VirtualDevice, VirtualDeviceBuilder},
-    AttributeSet, KeyCode, RelativeAxisCode, SwitchCode,
+    AbsInfo, AbsoluteAxisCode, AttributeSet, KeyCode, RelativeAxisCode, SwitchCode, UinputAbsSetup,
 };
-// Error
-use crate::error::{LibError, MudrasError, WrapError};
-use miette::{Error, IntoDiagnostic, Result};
-use tracing::{debug, error, info, trace, warn};
 
-pub fn create_uinput_device() -> Result<VirtualDevice, MudrasError> {
-    let keys: AttributeSet<KeyCode> = get_all_keys().iter().copied().collect();
-
-    let relative_axes: AttributeSet<RelativeAxisCode> =
-        get_all_relative_axes().iter().copied().collect();
-
-    let device = VirtualDeviceBuilder::new()?
-        .name("mudras virtual output")
-        .with_keys(&keys)?
-        .with_relative_axes(&relative_axes)?
-        .build()?;
-    Ok(device)
-}
-
-pub fn create_uinput_switches_device() -> Result<VirtualDevice, MudrasError> {
-    let switches: AttributeSet<SwitchCode> = get_all_switches().iter().copied().collect();
-
-    let device = VirtualDevice::builder()?
-        .name("mudras switches virtual output")
-        .with_switches(&switches)?
-        .build()?;
-    Ok(device)
-}
 pub fn get_all_keys() -> &'static [KeyCode] {
     &[
         evdev::KeyCode::KEY_RESERVED,
@@ -598,6 +571,67 @@ pub fn get_all_relative_axes() -> &'static [RelativeAxisCode] {
         RelativeAxisCode::REL_RESERVED,
         RelativeAxisCode::REL_WHEEL_HI_RES,
         RelativeAxisCode::REL_HWHEEL_HI_RES,
+    ]
+}
+
+pub fn get_all_absolute_axis() -> &'static [(AbsoluteAxisCode, u16)] {
+    &[
+        (AbsoluteAxisCode::ABS_X, 0x00),
+        (AbsoluteAxisCode::ABS_Y, 0x01),
+        (AbsoluteAxisCode::ABS_Z, 0x02),
+        (AbsoluteAxisCode::ABS_RX, 0x03),
+        (AbsoluteAxisCode::ABS_RY, 0x04),
+        (AbsoluteAxisCode::ABS_RZ, 0x05),
+        (AbsoluteAxisCode::ABS_THROTTLE, 0x06),
+        (AbsoluteAxisCode::ABS_RUDDER, 0x07),
+        (AbsoluteAxisCode::ABS_WHEEL, 0x08),
+        (AbsoluteAxisCode::ABS_GAS, 0x09),
+        (AbsoluteAxisCode::ABS_BRAKE, 0x0a),
+        (AbsoluteAxisCode::ABS_HAT0X, 0x10),
+        (AbsoluteAxisCode::ABS_HAT0Y, 0x11),
+        (AbsoluteAxisCode::ABS_HAT1X, 0x12),
+        (AbsoluteAxisCode::ABS_HAT1Y, 0x13),
+        (AbsoluteAxisCode::ABS_HAT2X, 0x14),
+        (AbsoluteAxisCode::ABS_HAT2Y, 0x15),
+        (AbsoluteAxisCode::ABS_HAT3X, 0x16),
+        (AbsoluteAxisCode::ABS_HAT3Y, 0x17),
+        (AbsoluteAxisCode::ABS_PRESSURE, 0x18),
+        (AbsoluteAxisCode::ABS_DISTANCE, 0x19),
+        (AbsoluteAxisCode::ABS_TILT_X, 0x1a),
+        (AbsoluteAxisCode::ABS_TILT_Y, 0x1b),
+        (AbsoluteAxisCode::ABS_TOOL_WIDTH, 0x1c),
+        (AbsoluteAxisCode::ABS_VOLUME, 0x20),
+        (AbsoluteAxisCode::ABS_MISC, 0x28),
+        // "MT slot being modified"
+        (AbsoluteAxisCode::ABS_MT_SLOT, 0x2f),
+        // "Major axis of touching ellipse"
+        (AbsoluteAxisCode::ABS_MT_TOUCH_MAJOR, 0x30),
+        // "Minor axis (omit if circular)"
+        (AbsoluteAxisCode::ABS_MT_TOUCH_MINOR, 0x31),
+        // "Major axis of approaching ellipse"
+        (AbsoluteAxisCode::ABS_MT_WIDTH_MAJOR, 0x32),
+        // "Minor axis (omit if circular)"
+        (AbsoluteAxisCode::ABS_MT_WIDTH_MINOR, 0x33),
+        // "Ellipse orientation"
+        (AbsoluteAxisCode::ABS_MT_ORIENTATION, 0x34),
+        // "Center X touch position"
+        (AbsoluteAxisCode::ABS_MT_POSITION_X, 0x35),
+        // "Center Y touch position"
+        (AbsoluteAxisCode::ABS_MT_POSITION_Y, 0x36),
+        // "Type of touching device"
+        (AbsoluteAxisCode::ABS_MT_TOOL_TYPE, 0x37),
+        // "Group a set of packets as a blob"
+        (AbsoluteAxisCode::ABS_MT_BLOB_ID, 0x38),
+        // "Unique ID of the initiated contact"
+        (AbsoluteAxisCode::ABS_MT_TRACKING_ID, 0x39),
+        // "Pressure on contact area"
+        (AbsoluteAxisCode::ABS_MT_PRESSURE, 0x3a),
+        // "Contact over distance"
+        (AbsoluteAxisCode::ABS_MT_DISTANCE, 0x3b),
+        // "Center X tool position"
+        (AbsoluteAxisCode::ABS_MT_TOOL_X, 0x3c),
+        // "Center Y tool position"
+        (AbsoluteAxisCode::ABS_MT_TOOL_Y, 0x3d),
     ]
 }
 
