@@ -66,38 +66,6 @@ impl Config {
     }
 }
 
-// Getters
-impl Config {
-    /// Get submaps list.
-    pub fn get_submaps(&self) -> Result<HashMap<String, Vec<Bind>>, MudrasError> {
-        let mut list = HashMap::new();
-
-        // Create a root submap from root binds.
-        let main_binds: Vec<Bind> = self
-            .items
-            .clone()
-            .into_iter()
-            .filter_map(|e| match e {
-                Item::Bind(bind) => Some(bind),
-                _ => None,
-            })
-            .collect();
-        list.insert("main".to_owned(), main_binds);
-
-        // Add other submaps to list.
-        for e in self.items.clone() {
-            match e {
-                Item::Submap(submap) => {
-                    list.insert(submap.name, submap.binds);
-                }
-                _ => {}
-            }
-        }
-
-        Ok(list)
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

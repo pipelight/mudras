@@ -24,31 +24,6 @@ Super+T {
   }
 }
 
-// Resize windows
-Super+Shift_L+m {
-  @press {
-    - r#"notify-send -a mudras "resize window""#
-    - r#"niri msg action "switch-preset-window-width-back""#
-  }
-}
-Super+Shift_L+n {
-  @press {
-    - r#"notify-send -a mudras "resize window""#
-    - r#"niri msg action "switch-preset-window-height""#
-  }
-}
-Super+Shift_L+e {
-  @press {
-    - r#"notify-send -a mudras "resize window""#
-    - r#"niri msg action "switch-preset-window-height-back""#
-  }
-}
-Super+Shift_L+i {
-  @press {
-    - r#"notify-send -a mudras "resize window""#
-    - r#"niri msg action "switch-preset-window-width""#
-  }
-}
 
 // Super+m { 
 //   @press {
@@ -76,7 +51,7 @@ Super+Shift_L+i {
 Super {
   @release {
     // enter a submap
-    - r#"niri msg action "open-overview""#
+    - r#"notify-send -a mudras  "enter window_manager""#
     @enter "window_manager"
   }
 }
@@ -84,10 +59,25 @@ Super {
 
 // Submap definition
 @submap name="window_manager" {
+  t {
+    @press {
+      - r#"notify-send -a mudras "submap testing""#
+    }
+  }
+  // Move
   Ctrl+m {
     @press {
-      - "notify-send 'niri mcl'"
       - "niri msg move-column-left"
+    }
+  }
+  Ctrl+n {
+    @press {
+      - "niri msg move-window-down"
+    }
+  }
+  Ctrl+e {
+    @press {
+      - "niri msg move-window-up"
     }
   }
   Ctrl+i {
@@ -95,15 +85,43 @@ Super {
       - "niri msg move-column-right"
     }
   }
+  Shift_L+t {
+    @press {
+      - r#"notify-send -a mudras "submap shift testing""#
+    }
+  }
+  // Resize
+  Shift_L+m {
+    @press {
+      - r#"niri msg action "switch-preset-window-width-back""#
+    }
+  }
+  Shift_L+n {
+    @press {
+      - r#"niri msg action "switch-preset-window-height""#
+    }
+  }
+  Shift_L+e {
+    @press {
+      - r#"niri msg action "switch-preset-window-height-back""#
+    }
+  }
+  Shift_L+i {
+    @press {
+      - r#"niri msg action "switch-preset-window-width""#
+    }
+  }
+  // Expel
 
   // Exit the submap
   Super { 
-    @press {
+    @release {
+      - r#"notify-send -a mudras  "exit window_manager""#
       @exit; 
     }
   }
   Escape { 
-    @press {
+    @release {
       @exit; 
     }
   }

@@ -1,4 +1,5 @@
 use miette::{Diagnostic, MietteHandlerOpts, Report, Result, RgbColors};
+use pipelight_error::PipelightError;
 use thiserror::Error;
 use tracing::error;
 
@@ -19,6 +20,10 @@ pub enum MudrasError {
     #[error(transparent)]
     #[diagnostic(code(io::error))]
     IoError(#[from] std::io::Error),
+
+    #[error(transparent)]
+    #[diagnostic(code(exec::error))]
+    PipelightError(#[from] PipelightError),
 }
 
 /// A config error with help higher origin

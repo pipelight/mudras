@@ -1,5 +1,15 @@
-use super::utils;
+/*
+* KDL parsing utilities.
+*
+* Please keep in mind that structs here have nothing in common
+* with the configuration file structure (node, children...)
+* The file has a "free" form that is processed from inside the decode_children functions,
+* then content is parsed into final easily usable structs.
+*
+*/
 
+use super::utils::{self, get_modifiers};
+use crate::input::utils::KeyState;
 use evdev::KeyCode;
 // Config
 use serde::{Deserialize, Serialize};
@@ -11,18 +21,12 @@ use knus::{Decode, DecodeChildren};
 
 // Error
 use crate::error::{MudrasError, WrapError};
-use miette::{Error, IntoDiagnostic, Result};
+use miette::Result;
 use tracing::{error, trace};
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone)]
 pub struct Config {
-    pub items: Vec<Item>,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize)]
-pub enum Item {
-    Bind(Bind),
-    Submap(Submap),
+    pub submaps: Submaps,
 }
 
 impl<S> knus::DecodeChildren<S> for Config
@@ -33,29 +37,54 @@ where
         nodes: &[knus::ast::SpannedNode<S>],
         ctx: &mut knus::decode::Context<S>,
     ) -> Result<Self, DecodeError<S>> {
-        let mut items = Vec::new();
+        // Create a main submap
+        let mut main: Submap = Submap {
+            name: "main".to_owned(),
+            mods: vec![],
+            binds: Binds::new(),
+        };
+        let mut raw_binds: Binds = HashMap::new();
+        let mut binds: Binds = HashMap::new();
+
+        let mut submaps = Submaps::new();
+
         for node in nodes {
             match &*node.node_name.to_string() {
                 "@submap" => {
                     let submap = Submap::decode_node(node, ctx)?;
-                    // println!("{:#?}", submap);
-                    items.push(Item::Submap(submap));
+                    submaps.insert(submap.name.clone(), submap);
                 }
                 _ => {
+                    // Modifiers
                     let bind = Bind::decode_node(node, ctx)?;
-                    // println!("{:#?}", bind);
-                    items.push(Item::Bind(bind));
+                    raw_binds.insert(bind.sequence, bind.args);
+
+                    // Binds
+                    let bind = Bind::decode_node(node, ctx)?;
+                    // Sort sequence
+                    let mut sequence = bind.sequence.clone();
+                    sequence.sort_by(|a, b| a.0.cmp(&b.0));
+                    binds.insert(sequence, bind.args);
                 }
             };
         }
-        Ok(Self { items })
+        // Main submap
+        let mods = get_modifiers(&raw_binds).unwrap();
+        main.mods = mods;
+        main.binds = binds;
+
+        submaps.insert(main.name.clone(), main);
+        Ok(Self { submaps })
     }
 }
 
-#[derive(Default, Clone, Debug, PartialEq, Serialize)]
+pub type Submaps = HashMap<String, Submap>;
+
+#[derive(Default, Clone, Debug)]
 pub struct Submap {
     pub name: String,
-    pub binds: Vec<Bind>,
+    pub mods: Vec<KeyCode>,
+    pub binds: Binds,
 }
 impl<S> knus::Decode<S> for Submap
 where
@@ -75,35 +104,60 @@ where
                 _ => {}
             };
         }
-        // Binds
-        let mut binds = Vec::new();
+        // Modifiers
+        let mut raw_binds: Binds = HashMap::new();
         for node in node.children() {
             let bind = Bind::decode_node(node, ctx)?;
-            binds.push(bind);
+            raw_binds.insert(bind.sequence, bind.args);
         }
-        Ok(Submap { name, binds })
+        let mods = get_modifiers(&raw_binds).unwrap();
+
+        // Binds
+        let mut binds: Binds = HashMap::new();
+        for node in node.children() {
+            let bind = Bind::decode_node(node, ctx)?;
+            // Sort sequence
+            let mut sequence = bind.sequence.clone();
+            sequence.sort_by(|a, b| a.0.cmp(&b.0));
+
+            binds.insert(sequence, bind.args);
+        }
+
+        Ok(Submap { name, mods, binds })
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Hash)]
+pub enum SequenceType {
+    Press,
+    Release,
+}
+
+pub type Binds = HashMap<BindSequence, BindArgs>;
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct Bind {
-    pub sequence: Vec<KeyCode>,
-    // #[serde(flatten)]
-    pub action: KeyAction,
+    pub sequence: BindSequence,
+    pub args: BindArgs,
+}
+
+pub type BindSequence = Vec<(KeyCode, KeyState)>;
+
+#[derive(Default, Clone, Debug, PartialEq)]
+pub struct BindArgs {
+    pub commands: Vec<Command>,
     // Extra properties
-    /// Whether the keys must be passed to underlying applications
-    /// Default to true (keys are not passed)
-    pub swallow: Option<bool>,
+    /// Whether the keys must be passed to underlying applications.
+    /// Default to true (keys are not passed).
+    pub swallow: bool,
+    /// Repeat the action when key maintained.
+    /// Default to true.
+    pub repeat: bool,
+    /// Do not trigger release action when too much key pressed.
+    /// Default to true.
+    pub exact: bool,
 }
-impl Default for Bind {
-    fn default() -> Self {
-        Self {
-            sequence: utils::bind_to_keys(&String::default()).unwrap(),
-            action: KeyAction::default(),
-            swallow: Some(true),
-        }
-    }
-}
+
 impl<S> knus::Decode<S> for Bind
 where
     S: knus::traits::ErrorSpan,
@@ -112,38 +166,45 @@ where
         node: &knus::ast::SpannedNode<S>,
         ctx: &mut knus::decode::Context<S>,
     ) -> Result<Self, DecodeError<S>> {
-        let sequence = utils::bind_to_keys(&node.node_name.to_string()).unwrap();
+        // Binds
+        // Bind args
+        let mut args = BindArgs {
+            swallow: true,
+            repeat: false,
+            exact: true,
+            commands: vec![],
+        };
 
-        // Global args
-        let mut swallow = Some(true); // default
+        // Sequence Global args
         for (name, val) in &node.properties {
             match &***name {
                 "swallow" => {
-                    swallow = Some(knus::traits::DecodeScalar::decode(val, ctx)?);
+                    args.swallow = knus::traits::DecodeScalar::decode(val, ctx)?;
                 }
                 _ => {}
             }
         }
 
-        let mut action = KeyAction::default();
+        // Bind sequence
+        let mut sequence = vec![];
         for child in node.children() {
             let name: String = child.node_name.to_string();
             match &*name {
                 "@press" => {
+                    sequence =
+                        utils::bind_to_keys(&node.node_name.to_string(), &SequenceType::Press)
+                            .unwrap();
                     let mut iter_args = node.arguments.iter();
-                    let repeat = if let Some(val) = iter_args.next() {
-                        // println!("{:#?}", val);
-                        knus::traits::DecodeScalar::decode(val, ctx)?
-                    } else {
-                        Some(true)
+                    if let Some(val) = iter_args.next() {
+                        args.repeat = knus::traits::DecodeScalar::decode(val, ctx)?
                     };
-
-                    let commands = Some(children_to_commands(child, ctx)?);
-                    action.press = Some(Press { repeat, commands });
+                    args.commands = children_to_commands(child, ctx)?;
                 }
                 "@release" => {
-                    let commands = Some(children_to_commands(child, ctx)?);
-                    action.release = Some(Release { commands });
+                    sequence =
+                        utils::bind_to_keys(&node.node_name.to_string(), &SequenceType::Release)
+                            .unwrap();
+                    args.commands = children_to_commands(child, ctx)?;
                 }
                 _ => {
                     ctx.emit_error(DecodeError::unexpected(
@@ -155,41 +216,8 @@ where
             };
         }
 
-        Ok(Self {
-            sequence,
-            action,
-            swallow,
-        })
+        Ok(Self { sequence, args })
     }
-}
-
-#[derive(knus::Decode, Debug, Clone, Default, PartialEq, Hash, Serialize)]
-pub struct KeyAction {
-    #[knus(child)]
-    pub press: Option<Press>,
-    #[knus(child)]
-    pub release: Option<Release>,
-}
-
-#[derive(knus::Decode, Debug, Clone, PartialEq, Hash, Serialize)]
-pub struct Press {
-    #[knus(property)]
-    pub repeat: Option<bool>,
-    // #[knus(children)]
-    pub commands: Option<Vec<Command>>,
-}
-impl Default for Press {
-    fn default() -> Self {
-        Self {
-            repeat: Some(false),
-            commands: None,
-        }
-    }
-}
-
-#[derive(knus::Decode, Debug, Clone, Default, PartialEq, Hash, Serialize)]
-pub struct Release {
-    pub commands: Option<Vec<Command>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Hash, Serialize, Deserialize)]

@@ -1,19 +1,24 @@
-use super::Bind;
+use super::{Bind, Binds, SequenceType};
+
 use evdev::KeyCode;
 use std::path::Path;
 
 // Error
-use crate::error::{LibError, MudrasError};
-use miette::{Error, IntoDiagnostic, Result};
+use crate::{
+    error::{LibError, MudrasError},
+    input::utils::KeyState,
+};
+use miette::Result;
 use tracing::{error, trace};
 
-pub fn get_modifiers(binds: &Vec<Bind>) -> Result<Vec<evdev::KeyCode>, MudrasError> {
-    let mut mods = vec![];
-    for bind in binds.clone() {
-        if let Some(first_key) = bind.sequence.first() {
-            mods.push(*first_key);
+pub fn get_modifiers(binds: &Binds) -> Result<Vec<KeyCode>, MudrasError> {
+    let mut mods: Vec<KeyCode> = vec![];
+    for (sequence, args) in binds.clone() {
+        if let Some(key) = sequence.first() {
+            mods.push(key.0);
         }
     }
+    mods.sort();
     mods.dedup();
     Ok(mods)
 }
@@ -40,20 +45,33 @@ pub fn shellexpand(relpath: &str) -> Result<String, MudrasError> {
 }
 
 /// Transform a bind definition into its keycode.
-pub fn bind_to_keys(bind: &str) -> Result<Vec<KeyCode>, MudrasError> {
+pub fn bind_to_keys(
+    bind: &str,
+    sequence_type: &SequenceType,
+) -> Result<Vec<(KeyCode, KeyState)>, MudrasError> {
     let keys: Vec<&str> = bind.split("+").collect();
-    let mut keycodes = vec![];
+    let mut sequence = vec![];
 
     for key in keys {
         let keycode = match &*key.to_lowercase() {
+            "escape" => evdev::KeyCode::KEY_ESC,
+
             "super" => KeyCode::KEY_LEFTMETA,
+            "super_l" => KeyCode::KEY_LEFTMETA,
+            "super_r" => KeyCode::KEY_RIGHTMETA,
+
             "ctrl" => evdev::KeyCode::KEY_LEFTCTRL,
-            "alt" => evdev::KeyCode::KEY_LEFTALT,
-            "tab" => evdev::KeyCode::KEY_TAB,
-            "backspace" => evdev::KeyCode::KEY_BACKSPACE,
+            "ctrl_l" => evdev::KeyCode::KEY_LEFTCTRL,
+            "ctrl_r" => evdev::KeyCode::KEY_RIGHTCTRL,
+
             "shift" => evdev::KeyCode::KEY_LEFTSHIFT,
             "shift_l" => evdev::KeyCode::KEY_LEFTSHIFT,
             "shift_r" => evdev::KeyCode::KEY_RIGHTSHIFT,
+
+            "alt" => evdev::KeyCode::KEY_LEFTALT,
+            "tab" => evdev::KeyCode::KEY_TAB,
+            "backspace" => evdev::KeyCode::KEY_BACKSPACE,
+
             "enter" => evdev::KeyCode::KEY_ENTER,
             "space" => evdev::KeyCode::KEY_SPACE,
 
@@ -104,9 +122,18 @@ pub fn bind_to_keys(bind: &str) -> Result<Vec<KeyCode>, MudrasError> {
 
             _ => evdev::KeyCode::KEY_RESERVED,
         };
-        keycodes.push(keycode);
+        sequence.push((keycode, KeyState::Pressed));
     }
-    Ok(keycodes)
+
+    match &sequence_type {
+        SequenceType::Release => {
+            if let Some((_key, ref mut state)) = sequence.iter_mut().last() {
+                *state = KeyState::Released;
+            }
+        }
+        _ => {}
+    };
+    Ok(sequence)
 }
 
 #[cfg(test)]
@@ -117,15 +144,21 @@ mod tests {
 
     #[test]
     fn parse_sequence_to_keys() -> Result<()> {
-        let res = bind_to_keys("")?;
-        let empty: Vec<KeyCode> = vec![KeyCode::KEY_RESERVED];
+        let res = bind_to_keys("", &SequenceType::Press)?;
+        let empty: Vec<(KeyCode, KeyState)> = vec![(KeyCode::KEY_RESERVED, KeyState::Pressed)];
         assert_eq!(empty, res);
 
-        let res = bind_to_keys("Super")?;
-        assert_eq!(vec![KeyCode::KEY_LEFTMETA], res);
+        let res = bind_to_keys("Super", &SequenceType::Release)?;
+        assert_eq!(vec![(KeyCode::KEY_LEFTMETA, KeyState::Released)], res);
 
-        let res = bind_to_keys("Super+T")?;
-        assert_eq!(vec![KeyCode::KEY_LEFTMETA, KeyCode::KEY_T], res);
+        let res = bind_to_keys("Super+T", &SequenceType::Press)?;
+        assert_eq!(
+            vec![
+                (KeyCode::KEY_LEFTMETA, KeyState::Pressed),
+                (KeyCode::KEY_T, KeyState::Pressed)
+            ],
+            res
+        );
         Ok(())
     }
 }

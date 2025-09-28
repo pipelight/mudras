@@ -56,10 +56,10 @@ impl Server {
             keyboard_stream_map.insert(path.to_string(), device.into_event_stream()?);
             keyboard_states.insert(path.to_string(), KeyboardState::default());
         }
+
         // Bindings state
-        let submaps = config.get_submaps()?;
         let mut submaps_state = SubmapState {
-            submaps,
+            submaps: config.submaps.clone(),
             ..Default::default()
         };
 
@@ -76,12 +76,12 @@ impl Server {
                 Some((path, Ok(event))) = keyboard_stream_map.next() => {
                     match event.destructure() {
                         EventSummary::Key(_type, keycode, value) => {
-                            let state = match value {
+                            let key_state = match value {
                                 1 => KeyState::Pressed,
                                 0 => KeyState::Released,
                                 _ => KeyState::Undefined,
                             };
-                            match state {
+                            match key_state {
                                 KeyState::Pressed | KeyState::Released => {
                                     // trace!("key={:#?},state={:#?}", keycode, state);
 
@@ -93,12 +93,13 @@ impl Server {
                                                 keyboard_state.current.keys.remove(&key);
                                             }
                                         }
-                                        keyboard_state.current.keys.insert(keycode,state);
+                                        keyboard_state.current.keys.insert(keycode,key_state.clone());
 
                                         // Grab event if a modifier of the submap is pressed.
-                                        let current_submap = submaps_state.current.clone();
-                                        let binds = submaps_state.submaps.get(&current_submap).unwrap();
-                                        let mods = config::utils::get_modifiers(binds).unwrap();
+                                        let name = submaps_state.current.clone();
+                                        let submap = submaps_state.submaps.get(&name).unwrap();
+
+                                        let mods = submap.mods.clone();
                                         // Test if any submap modifier is pressed/released.
                                         let has_any_mod = mods.iter().any(|modifier| keyboard_state.current.keys.contains_key(modifier));
                                         if !has_any_mod {
@@ -106,7 +107,7 @@ impl Server {
                                         }
 
                                         // Trigger action.
-                                        utils::trigger_action(&mut submaps_state,keyboard_state).unwrap();
+                                        utils::trigger_action(&mut submaps_state,keyboard_state, &key_state, &mut virtual_keyboard, event).unwrap();
 
                                     }
                                 }
