@@ -1,7 +1,8 @@
+////////////////////////////////
 // Common applications
 Super+Space{
   @press {
-    - "yofi";
+    - "yofi"
   }
 }
 Super+q {
@@ -12,41 +13,19 @@ Super+q {
 Super+Enter {
   @press {
     - "kitty -e fish"
-    - r#"notify-send -a mudras "new term""#
   }
 }
-
-// Test
-Super+T {
-  @press {
-    - "kitty -e fish"
-    - r#"notify-send -a mudras "testing command""#
+// Common utils
+brightness_up {
+  @press repeat=true { 
+    - "light -A 10"; 
   }
 }
-
-
-// Super+m { 
-//   @press {
-//     - r#"niri msg action "focus-column-left""#; 
-//   }
-// } 
-// Super+n { 
-//   @press {
-//     - r#"niri msg action "focus-window-down""#; 
-//   }
-// } 
-// Super+n { 
-//   @press {
-//     - r#"niri msg action "focus-window-up""#; 
-//   }
-// } 
-// Super+i { 
-//   @press {
-//     - r#"niri msg action "focus-column-right""#; 
-//   }
-// } 
-
-
+brightness_down {
+  @press repeat=true { 
+    - "light -U 10"; 
+  }
+}
 // Submap
 Super {
   @release {
@@ -56,40 +35,77 @@ Super {
   }
 }
 
+////////////////////////////////
+// Focus
+// Super+f {
+//   @press {
+//     - r#"niri msg action "center-column""#
+//   }
+// }
+// Super+m {
+//   @press {
+//     - r#"niri msg action "focus-column-left""#
+//   }
+// }
+// Super+n { 
+//   @press {
+//     - r#"niri msg action "focus-window-down""#; 
+//   }
+// } 
+// Super+e { 
+//   @press {
+//     - r#"niri msg action "focus-window-up""#; 
+//   }
+// } 
+// Super+i {
+//   @press {
+//     - r#"niri msg action "focus-column-right""#
+//   }
+// }
 
+////////////////////////////////
 // Submap definition
 @submap name="window_manager" {
-  t {
-    @press {
-      - r#"notify-send -a mudras "submap testing""#
+  // Exit the submap
+  Super { 
+    @release {
+      - r#"notify-send -a mudras  "exit window_manager""#
+      @exit
     }
   }
-  // Move
-  Ctrl+m {
+  Escape {
     @press {
-      - "niri msg move-column-left"
+      @exit
     }
   }
-  Ctrl+n {
+
+  // Focus
+  m {
     @press {
-      - "niri msg move-window-down"
+      - r#"niri msg action "focus-column-left""#
     }
   }
-  Ctrl+e {
+  n { 
     @press {
-      - "niri msg move-window-up"
+      - r#"niri msg action "focus-window-down""#; 
+    }
+  } 
+  e { 
+    @press {
+      - r#"niri msg action "focus-window-up""#; 
+    }
+  } 
+  i {
+    @press {
+      - r#"niri msg action "focus-column-right""#
     }
   }
-  Ctrl+i {
+  f {
     @press {
-      - "niri msg move-column-right"
+      - r#"niri msg action "center-column""#
     }
   }
-  Shift_L+t {
-    @press {
-      - r#"notify-send -a mudras "submap shift testing""#
-    }
-  }
+
   // Resize
   Shift_L+m {
     @press {
@@ -111,30 +127,27 @@ Super {
       - r#"niri msg action "switch-preset-window-width""#
     }
   }
-  // Expel
 
-  // Exit the submap
-  Super { 
-    @release {
-      - r#"notify-send -a mudras  "exit window_manager""#
-      @exit; 
+  // Move
+  Ctrl+m {
+    @press {
+      - r#"niri msg action "move-column-left""#
     }
   }
-  Escape { 
-    @release {
-      @exit; 
+  Ctrl+n {
+    @press {
+      - r#"niri msg action "move-window-down""#
+    }
+  }
+  Ctrl+e {
+    @press {
+      - r#"niri msg action "move-window-up""#
+    }
+  }
+  Ctrl+i {
+    @press {
+      - r#"niri msg action "move-column-right""#
     }
   }
 }
 
-// Common utils
-XF86MonBrightnessUp {
-  @press repeat=true { 
-    - "light -A 10"; 
-  }
-}
-XF86MonBrightnessDown {
-  @press repeat=true { 
-    - "light -U 10"; 
-  }
-}

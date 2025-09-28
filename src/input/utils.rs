@@ -84,45 +84,42 @@ pub fn trigger_action(
 ) -> Result<(), MudrasError> {
     // Get current submap
     let name = submaps_state.current.clone();
-    if let Some(submap) = submaps_state.submaps.get(&name) {
-        // Sort keyboard sequence for comparison
-        let mut keyboard_sequence: Vec<(KeyCode, KeyState)> =
-            keyboard_state.current.keys.clone().into_iter().collect();
-        keyboard_sequence.sort_by(|a, b| a.0.cmp(&b.0));
+    let submap = submaps_state.submaps.get(&name).unwrap();
+    // Sort keyboard sequence for comparison
+    let mut keyboard_sequence: Vec<(KeyCode, KeyState)> =
+        keyboard_state.current.keys.clone().into_iter().collect();
+    keyboard_sequence.sort_by(|a, b| a.0.cmp(&b.0));
 
-        trace!("{:#?}", keyboard_sequence);
-        // A bind sequence is matched against the current keyboard sequence
-        if let Some(bind_args) = submap.binds.get(&keyboard_sequence) {
-            // Extra step for release keys
-            match key_state {
-                KeyState::Released => {
-                    if keyboard_state.previous.keys.len() > keyboard_state.current.keys.len() {
-                        virtual_keyboard.emit(&[event]).unwrap();
-                        return Ok(());
-                    }
-                }
-                KeyState::Pressed => {}
-                _ => {}
-            }
-            // Trigger action as soon as keys are detected.
-            for cmd in &bind_args.commands {
-                match cmd {
-                    Command::Sh(stdin) => {
-                        let mut p = Process::new().stdin(&stdin).term().background().to_owned();
-                        p.run()?;
-                    }
-                    Command::Internal(e) => match e {
-                        Keyword::Enter(submap_name) => {
-                            submaps_state.current = submap_name.to_owned();
-                        }
-                        Keyword::Exit => {
-                            submaps_state.current = "main".to_owned();
-                        }
-                    },
+    // trace!("{:#?}", keyboard_sequence);
+    // A bind sequence is matched against the current keyboard sequence
+    if let Some(bind_args) = submap.binds.get(&keyboard_sequence) {
+        // Extra step for release keys
+        match key_state {
+            KeyState::Released => {
+                if keyboard_state.previous.keys.len() > keyboard_state.current.keys.len() {
+                    virtual_keyboard.emit(&[event]).unwrap();
+                    return Ok(());
                 }
             }
-        } else {
-            virtual_keyboard.emit(&[event]).unwrap();
+            KeyState::Pressed => {}
+            _ => {}
+        }
+        // Trigger action as soon as keys are detected.
+        for cmd in &bind_args.commands {
+            match cmd {
+                Command::Sh(stdin) => {
+                    let mut p = Process::new().stdin(&stdin).term().background().to_owned();
+                    p.run()?;
+                }
+                Command::Internal(e) => match e {
+                    Keyword::Enter(submap_name) => {
+                        submaps_state.current = submap_name.to_owned();
+                    }
+                    Keyword::Exit => {
+                        submaps_state.current = "main".to_owned();
+                    }
+                },
+            }
         }
     } else {
         virtual_keyboard.emit(&[event]).unwrap();

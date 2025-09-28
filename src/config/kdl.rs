@@ -257,13 +257,6 @@ pub fn children_to_commands<S: knus::traits::ErrorSpan>(
     Ok(commands)
 }
 
-#[derive(knus::Decode, Default, Debug, PartialEq, Serialize)]
-pub struct Mode {
-    press: Option<Vec<String>>,
-    release: Option<Vec<String>>,
-    repeat: Option<Vec<String>>,
-}
-
 fn parse_arg_node<S: knus::traits::ErrorSpan, T: knus::traits::DecodeScalar<S>>(
     name: &str,
     node: &knus::ast::SpannedNode<S>,

@@ -99,16 +99,24 @@ impl Server {
                                         let name = submaps_state.current.clone();
                                         let submap = submaps_state.submaps.get(&name).unwrap();
 
-                                        let mods = submap.mods.clone();
+
                                         // Test if any submap modifier is pressed/released.
-                                        let has_any_mod = mods.iter().any(|modifier| keyboard_state.current.keys.contains_key(modifier));
+                                        let current_pressed_keys: Vec<KeyCode> = keyboard_state.current.keys.iter().filter_map(|(code, state)| {
+                                            if state == &KeyState::Pressed {
+                                                Some(code.to_owned())
+                                            }
+                                            else {
+                                                None
+                                            }
+                                        }).collect();
+                                        let mods = submap.mods.clone();
+                                        let has_any_mod = mods.iter().any(|modifier| current_pressed_keys.contains(modifier));
+
                                         if !has_any_mod {
                                            virtual_keyboard.emit(&[event]).unwrap();
                                         }
-
                                         // Trigger action.
                                         utils::trigger_action(&mut submaps_state,keyboard_state, &key_state, &mut virtual_keyboard, event).unwrap();
-
                                     }
                                 }
                                 _ => {}

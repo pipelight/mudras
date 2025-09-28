@@ -120,6 +120,9 @@ pub fn bind_to_keys(
             "n" => evdev::KeyCode::KEY_N,
             "m" => evdev::KeyCode::KEY_M,
 
+            "brightness_up" => evdev::KeyCode::KEY_BRIGHTNESSUP,
+            "brightness_down" => evdev::KeyCode::KEY_BRIGHTNESSDOWN,
+
             _ => evdev::KeyCode::KEY_RESERVED,
         };
         sequence.push((keycode, KeyState::Pressed));
