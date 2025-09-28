@@ -1,18 +1,13 @@
 # Mudras: A hotkey daemon for elite shinobi.
 
-**Currently in Alpha.**
+_A tool for keyboards shortcuts
+that gives me enough rope to shoot yourself in the foot._
 
-A keyboard utility.
 It executes commands when a key combination is matched.
-Set up binds and subbinds with actions on key press and release.
-
-_I need a hotkey daemon for niri, hyprland, bspwm... (wayland and X11),
-that gives me enough rope to shoot myself in the foot._
 
 ## Configuration
 
 A single configuration file in **kdl** at `~/.config/mudras/config.kdl`
-Very similar to niri bind.
 
 ### Set up a bind (or hotkey, or binding).
 

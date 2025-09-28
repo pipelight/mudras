@@ -80,6 +80,11 @@ Super {
   }
 
   // Focus
+  f {
+    @press {
+      - r#"niri msg action "center-column""#
+    }
+  }
   m {
     @press {
       - r#"niri msg action "focus-column-left""#
@@ -98,11 +103,6 @@ Super {
   i {
     @press {
       - r#"niri msg action "focus-column-right""#
-    }
-  }
-  f {
-    @press {
-      - r#"niri msg action "center-column""#
     }
   }
 
