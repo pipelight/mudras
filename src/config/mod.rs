@@ -23,7 +23,7 @@ impl Config {
     /// Get config from FHS path.
     fn release_path() -> Result<PathBuf, MudrasError> {
         let mut path = PathBuf::new();
-        path.push(utils::shellexpand("/home/anon/.config/mudras/config.kdl")?);
+        path.push(utils::shellexpand("~/.config/mudras/config.kdl")?);
         Ok(path)
     }
     /// Return configuration from default file path.
