@@ -109,7 +109,7 @@ pub fn trigger_action(
             match cmd {
                 Command::Sh(stdin) => {
                     let mut p = Process::new().stdin(&stdin).term().background().to_owned();
-                    p.run()?;
+                    let _ = p.run();
                 }
                 Command::Internal(e) => match e {
                     Keyword::Enter(submap_name) => {

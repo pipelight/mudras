@@ -31,6 +31,7 @@ Super {
   @release {
     // enter a submap
     - r#"notify-send -a mudras  "enter window_manager""#
+    - r#"niri msg action "set-workspace-name manageable""#
     @enter "window_manager"
   }
 }
@@ -70,11 +71,13 @@ Super {
   Super { 
     @release {
       - r#"notify-send -a mudras  "exit window_manager""#
+      - r#"niri msg action "unset-workspace-name""#
       @exit
     }
   }
   Escape {
     @press {
+      - r#"niri msg action "unset-workspace-name""#
       @exit
     }
   }
@@ -147,6 +150,18 @@ Super {
   Ctrl+i {
     @press {
       - r#"niri msg action "move-column-right""#
+    }
+  }
+
+  // Change workspace/desktop
+  Up {
+    @press {
+      - r#"niri msg action "focus-workspace-up""#
+    }
+  }
+  Down {
+    @press {
+      - r#"niri msg action "focus-workspace-down""#
     }
   }
 }
