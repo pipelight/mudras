@@ -37,7 +37,10 @@ impl Server {
                                 let _ = device.grab();
                             }
                         }
-                        SIGHUP => {}
+                        SIGHUP => {
+                            // Update configuration
+
+                        }
                         SIGINT => {
                             for mut device in evdev::enumerate().map(|(_, device)| device).filter(utils::check_device_is_keyboard) {
                                 let _ = device.ungrab();
